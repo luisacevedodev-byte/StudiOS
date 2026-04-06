@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:layout_marginHorizontal="4dp"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp">
+
+    <LinearLayout
+        android:id="@+id/layoutPrincipalItem"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground">
+
+        <CheckBox
+            android:id="@+id/cbCompletar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:buttonTint="@color/gris_texto"
+            android:minWidth="0dp"
+            android:minHeight="0dp"/>
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <TextView
+                android:id="@+id/tvTituloItem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Examen de Base de Datos"
+                android:textSize="17sp"
+                android:textStyle="bold"
+                android:textColor="?attr/colorOnSurface"
+                android:ellipsize="end"
+                android:maxLines="1"/>
+
+            <TextView
+                android:id="@+id/tvFechaItem"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                tools:text="Vence: 2026-04-10"
+                android:textSize="14sp"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/gris_texto"/>
+        </LinearLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPrioridad"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:layout_marginEnd="8dp"
+            app:cardBackgroundColor="#FF4C4C"
+            app:cardCornerRadius="7dp"
+            app:strokeWidth="0dp"/>
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>
