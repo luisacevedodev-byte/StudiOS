@@ -5,14 +5,13 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.textfield.TextInputEditText
 import com.luixard.studios.R
+import com.luixard.studios.utilidades.MensajesUI
 
 class AvanceTareaDialog(
-    private val textoExistente: String = "", // Nuevo parámetro para editar
+    private val textoExistente: String = "",
     private val alGuardar: (String) -> Unit
 ) : DialogFragment() {
 
@@ -28,11 +27,8 @@ class AvanceTareaDialog(
         val btnCancelar = view.findViewById<Button>(R.id.btnCancelarAvance)
         val btnGuardar = view.findViewById<Button>(R.id.btnGuardarAvance)
 
-        // Si estamos editando, llenamos el campo
         if (textoExistente.isNotEmpty()) {
-            // Quitamos la fecha "[dd/MM/yyyy] " para que solo edite la nota
-            val textoLimpio = textoExistente.substringAfter("] ")
-            etNota.setText(textoLimpio)
+            etNota.setText(textoExistente)
         }
 
         btnCancelar.setOnClickListener { dismiss() }
@@ -40,7 +36,7 @@ class AvanceTareaDialog(
         btnGuardar.setOnClickListener {
             val nota = etNota.text.toString().trim()
             if (nota.isEmpty()) {
-                Toast.makeText(requireContext(), "Escribe un avance", Toast.LENGTH_SHORT).show()
+                MensajesUI.advertencia(requireActivity(), "No puedes guardar un avance vacío")
                 return@setOnClickListener
             }
             alGuardar(nota)

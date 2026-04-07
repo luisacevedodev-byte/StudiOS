@@ -1,37 +1,156 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<com.google.android.material.card.MaterialCardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal"
-    android:paddingHorizontal="12dp"
-    android:paddingVertical="8dp"
-    android:layout_marginBottom="8dp"
-    android:background="@drawable/ic_launcher_background"
-    android:backgroundTint="#0D000000"
-    android:gravity="center_vertical">
+    android:layout_marginBottom="10dp"
+    android:layout_marginHorizontal="4dp"
+    app:cardBackgroundColor="?attr/colorSurface"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
+    app:strokeWidth="1dp"
+    app:strokeColor="@color/studios_cyan_dark"
+    android:animateLayoutChanges="true">
 
-    <TextView
-        android:id="@+id/tvTextoAvance"
-        android:layout_width="0dp"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_weight="1"
-        android:textColor="?attr/colorOnSurface"
-        android:textSize="13sp"/>
+        android:orientation="vertical">
 
-    <ImageButton
-        android:id="@+id/btnEditarAvance"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:layout_marginEnd="12dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_editar" />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="3dp"
+            android:background="@color/studios_cyan"
+            android:alpha="0.6" />
 
-    <ImageButton
-        android:id="@+id/btnEliminarAvance"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:scaleType="fitCenter"
-        android:src="@drawable/ic_basura" />
-</LinearLayout>
+        <LinearLayout
+            android:id="@+id/layoutPrincipalAvance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="14dp"
+            android:gravity="center_vertical"
+            android:background="?attr/selectableItemBackground">
+
+            <LinearLayout
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:gravity="center"
+                android:background="@drawable/bg_circulo_cyan"
+                android:layout_marginEnd="12dp">
+
+                <ImageView
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:src="@android:drawable/ic_menu_edit"
+                    app:tint="@color/white" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Fila de fecha/hora con ícono reloj -->
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:layout_marginBottom="5dp">
+
+                    <ImageView
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:src="@android:drawable/ic_menu_recent_history"
+                        app:tint="@color/studios_cyan"
+                        android:layout_marginEnd="4dp" />
+
+                    <TextView
+                        android:id="@+id/tvFechaHoraAvance"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        tools:text="06/04/2026 03:20 PM"
+                        android:textColor="@color/studios_cyan"
+                        android:textSize="11sp"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.03" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvTextoAvance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    tools:text="Terminé los primeros dos ejercicios del capítulo 3."
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="14sp"
+                    android:lineSpacingExtra="3dp"
+                    android:maxLines="2"
+                    android:ellipsize="end" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/ivFlechaAvance"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:src="@android:drawable/arrow_down_float"
+                android:layout_marginStart="8dp"
+                android:alpha="0.5"
+                app:tint="@color/gris_texto" />
+        </LinearLayout>
+
+        <View
+            android:id="@+id/divisorOpciones"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorOutline"
+            android:alpha="0.15"
+            android:visibility="gone" />
+
+        <!-- Botones de editar / eliminar (expandibles) -->
+        <LinearLayout
+            android:id="@+id/layoutOpcionesAvance"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="10dp"
+            android:gravity="end|center_vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEditarAvance"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Editar"
+                android:textSize="12sp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:layout_marginEnd="10dp"
+                app:icon="@drawable/ic_editar"
+                app:iconSize="14dp"
+                app:iconPadding="4dp"
+                app:backgroundTint="@color/studios_cyan_dark" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnEliminarAvance"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:text="Eliminar"
+                android:textSize="12sp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:icon="@drawable/ic_basura"
+                app:iconSize="14dp"
+                app:iconPadding="4dp"
+                app:backgroundTint="#BD4040"
+                android:textColor="#542424" />
+        </LinearLayout>
+
+    </LinearLayout>
+</com.google.android.material.card.MaterialCardView>

@@ -4,6 +4,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
+import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -17,8 +19,11 @@ class AdaptadorHistorial(
 ) : ListAdapter<Tarea, AdaptadorHistorial.HistorialViewHolder>(DiffCallback) {
 
     class HistorialViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val layoutPrincipal: LinearLayout = view.findViewById(R.id.layoutPrincipalHistorial)
+        val layoutOpciones: LinearLayout = view.findViewById(R.id.layoutOpcionesHistorial)
         val titulo: TextView = view.findViewById(R.id.tvTituloHistorial)
         val fecha: TextView = view.findViewById(R.id.tvFechaHistorial)
+        val ivFlecha: ImageView = view.findViewById(R.id.ivFlechaHistorial)
         val btnRestaurar: ImageButton = view.findViewById(R.id.btnRestaurar)
         val btnEliminar: ImageButton = view.findViewById(R.id.btnEliminarPermanente)
     }
@@ -31,10 +36,23 @@ class AdaptadorHistorial(
     override fun onBindViewHolder(holder: HistorialViewHolder, position: Int) {
         val tarea = getItem(position)
         holder.titulo.text = tarea.titulo_tarea
-        holder.fecha.text = tarea.fecha_entrega
+
+        val prefijo = if (tarea.es_completada) "Finalizada: " else "Borrada: "
+        holder.fecha.text = prefijo + tarea.fecha_entrega
 
         holder.btnRestaurar.setOnClickListener { alRestaurar(tarea) }
         holder.btnEliminar.setOnClickListener { alEliminarPermanente(tarea) }
+
+        // --- Animación de Despliegue Suave ---
+        holder.layoutOpciones.visibility = View.GONE
+        var estaExpandido = false
+
+        holder.layoutPrincipal.setOnClickListener {
+            estaExpandido = !estaExpandido
+            holder.layoutOpciones.visibility = if (estaExpandido) View.VISIBLE else View.GONE
+            // Gira la flecha 180 grados suavemente (350 ms = más lento)
+            holder.ivFlecha.animate().rotation(if (estaExpandido) 180f else 0f).setDuration(350).start()
+        }
     }
 
     companion object {

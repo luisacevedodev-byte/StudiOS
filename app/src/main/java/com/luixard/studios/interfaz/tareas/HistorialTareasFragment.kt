@@ -13,6 +13,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.luixard.studios.R
+import com.luixard.studios.utilidades.MensajesUI
 
 class HistorialTareasFragment : Fragment() {
 
@@ -30,12 +31,10 @@ class HistorialTareasFragment : Fragment() {
         val recyclerHistorial = view.findViewById<RecyclerView>(R.id.rvListaHistorial)
         val tvVacio = view.findViewById<TextView>(R.id.tvHistorialVacio)
 
-        // 1. Configurar la flecha de regreso
         toolbar.setNavigationOnClickListener {
-            parentFragmentManager.popBackStack() // Cierra esta pantalla y vuelve a la lista
+            parentFragmentManager.popBackStack()
         }
 
-        // 2. Configurar el adaptador con los diálogos de confirmación (CU-05)
         val adaptador = AdaptadorHistorial(
             alRestaurar = { tarea ->
                 val mensaje = if (tarea.es_completada) "¿Desmarcar esta tarea y devolverla a pendientes?" else "¿Restaurar esta tarea borrada?"
@@ -44,6 +43,7 @@ class HistorialTareasFragment : Fragment() {
                     .setMessage(mensaje)
                     .setPositiveButton("Sí, restaurar") { _, _ ->
                         viewModel.restaurarTarea(tarea.id_tarea)
+                        MensajesUI.exito(requireActivity(), "Tarea restaurada con éxito")
                     }
                     .setNegativeButton("Cancelar", null)
                     .show()
@@ -54,6 +54,7 @@ class HistorialTareasFragment : Fragment() {
                     .setMessage("¿Estás seguro? Esta acción no se puede deshacer y borrará la tarea definitivamente.")
                     .setPositiveButton("Eliminar") { _, _ ->
                         viewModel.eliminarPermanente(tarea)
+                        MensajesUI.error(requireActivity(), "La tarea fue eliminada para siempre")
                     }
                     .setNegativeButton("Cancelar", null)
                     .show()
@@ -63,20 +64,16 @@ class HistorialTareasFragment : Fragment() {
         recyclerHistorial.layoutManager = LinearLayoutManager(requireContext())
         recyclerHistorial.adapter = adaptador
 
-        // 3. Función para cambiar entre Completadas y Borradas
         fun actualizarLista(tabSeleccionada: Int) {
-            // Removemos observadores anteriores para que no se mezclen
             viewModel.tareasCompletadas.removeObservers(viewLifecycleOwner)
             viewModel.tareasBorradas.removeObservers(viewLifecycleOwner)
 
             if (tabSeleccionada == 0) {
-                // Pestaña Completadas
                 viewModel.tareasCompletadas.observe(viewLifecycleOwner) { lista ->
                     adaptador.submitList(lista)
                     tvVacio.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
                 }
             } else {
-                // Pestaña Borradas
                 viewModel.tareasBorradas.observe(viewLifecycleOwner) { lista ->
                     adaptador.submitList(lista)
                     tvVacio.visibility = if (lista.isEmpty()) View.VISIBLE else View.GONE
@@ -84,10 +81,8 @@ class HistorialTareasFragment : Fragment() {
             }
         }
 
-        // Cargamos las completadas por defecto al entrar
         actualizarLista(0)
 
-        // 4. Escuchar cuando tocas las pestañas
         tabLayout.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
             override fun onTabSelected(tab: TabLayout.Tab?) {
                 tab?.position?.let { actualizarLista(it) }

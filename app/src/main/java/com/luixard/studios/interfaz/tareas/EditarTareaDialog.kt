@@ -7,16 +7,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageButton
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.RadioGroup
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.DialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.textfield.TextInputEditText
 import com.luixard.studios.R
 import com.luixard.studios.datos.modelos.Tarea
+import com.luixard.studios.utilidades.MensajesUI
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -42,12 +43,11 @@ class EditarTareaDialog(
         val tvTituloDialogo = view.findViewById<TextView>(R.id.tvTituloNuevaTarea)
         val etTitulo = view.findViewById<TextInputEditText>(R.id.etTituloTarea)
         val etFecha = view.findViewById<TextInputEditText>(R.id.etFechaEntrega)
+        val etMateria = view.findViewById<TextInputEditText>(R.id.etMateria)
         val etDescripcion = view.findViewById<TextInputEditText>(R.id.etDescripcion)
         val rgPrioridad = view.findViewById<RadioGroup>(R.id.rgPrioridad)
         val btnGuardar = view.findViewById<Button>(R.id.btnGuardarTarea)
         val btnCerrar = view.findViewById<ImageButton>(R.id.btnCerrarFormulario)
-
-        // Ahora el botón basura es buscado genéricamente como View para no generar conflicto con el XML
         val btnEliminar = view.findViewById<View>(R.id.btnEliminarDesdeDetalle)
 
         val tabLayout = view.findViewById<TabLayout>(R.id.tabLayoutDetalles)
@@ -66,16 +66,37 @@ class EditarTareaDialog(
                 tvAvancesVacio.visibility = View.GONE
                 listaAvances.forEachIndexed { index, avance ->
                     val vistaAvance = layoutInflater.inflate(R.layout.item_avance, null)
-                    val tvTexto = vistaAvance.findViewById<TextView>(R.id.tvTextoAvance)
-                    val btnEdit = vistaAvance.findViewById<ImageButton>(R.id.btnEditarAvance)
-                    val btnBorrar = vistaAvance.findViewById<ImageButton>(R.id.btnEliminarAvance)
 
-                    tvTexto.text = avance
+                    val layoutPrincipal = vistaAvance.findViewById<LinearLayout>(R.id.layoutPrincipalAvance)
+                    val layoutOpciones = vistaAvance.findViewById<LinearLayout>(R.id.layoutOpcionesAvance)
+                    val tvFechaHora = vistaAvance.findViewById<TextView>(R.id.tvFechaHoraAvance)
+                    val tvTexto = vistaAvance.findViewById<TextView>(R.id.tvTextoAvance)
+                    val ivFlecha = vistaAvance.findViewById<ImageView>(R.id.ivFlechaAvance)
+
+                    // IMPORTANTE: Ahora se buscan como Button porque cambiaste el diseño a MaterialButton
+                    val btnEdit = vistaAvance.findViewById<Button>(R.id.btnEditarAvance)
+                    val btnBorrar = vistaAvance.findViewById<Button>(R.id.btnEliminarAvance)
+
+                    val partes = avance.split("|SPLIT|")
+                    val fechaHora = if(partes.size > 1) partes[0] else ""
+                    val textoAvance = if(partes.size > 1) partes[1] else avance
+
+                    tvFechaHora.text = fechaHora
+                    tvTexto.text = textoAvance
+
+                    layoutOpciones.visibility = View.GONE
+                    var expandido = false
+
+                    layoutPrincipal.setOnClickListener {
+                        expandido = !expandido
+                        layoutOpciones.visibility = if (expandido) View.VISIBLE else View.GONE
+                        ivFlecha.animate().rotation(if (expandido) 180f else 0f).setDuration(350).start()
+                    }
 
                     btnEdit.setOnClickListener {
-                        val dialogAvance = AvanceTareaDialog(avance) { textoEditado ->
-                            val fechaHoy = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-                            listaAvances[index] = "• [$fechaHoy] $textoEditado"
+                        val dialogAvance = AvanceTareaDialog(textoAvance) { textoEditado ->
+                            val fechaHoy = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault()).format(Date())
+                            listaAvances[index] = "$fechaHoy|SPLIT|$textoEditado"
                             renderizarAvances()
                         }
                         dialogAvance.show(parentFragmentManager, "AvanceTareaDialog")
@@ -88,9 +109,9 @@ class EditarTareaDialog(
                             .setPositiveButton("Eliminar") { _, _ ->
                                 listaAvances.removeAt(index)
                                 renderizarAvances()
+                                MensajesUI.error(requireActivity(), "Registro de avance eliminado")
                             }
-                            .setNegativeButton("Cancelar", null)
-                            .show()
+                            .setNegativeButton("Cancelar", null).show()
                     }
 
                     contenedorAvances.addView(vistaAvance)
@@ -106,6 +127,9 @@ class EditarTareaDialog(
 
             etTitulo.setText(tareaAEditar.titulo_tarea)
             etFecha.setText(tareaAEditar.fecha_entrega)
+
+            // Solución de ID materia String/Int
+            etMateria.setText(tareaAEditar.id_materia?.toString() ?: "")
             fechaSeleccionada = tareaAEditar.fecha_entrega
 
             val partesDescripcion = tareaAEditar.descripcion_tarea?.split("||") ?: listOf("", "")
@@ -147,10 +171,10 @@ class EditarTareaDialog(
 
         btnNuevoAvance.setOnClickListener {
             val dialogAvance = AvanceTareaDialog("") { nuevaNota ->
-                val fechaHoy = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-                listaAvances.add("• [$fechaHoy] $nuevaNota")
+                val fechaHoy = SimpleDateFormat("dd/MM/yyyy hh:mm a", Locale.getDefault()).format(Date())
+                listaAvances.add("$fechaHoy|SPLIT|$nuevaNota")
                 renderizarAvances()
-                Toast.makeText(requireContext(), "Avance registrado. No olvides Guardar Cambios.", Toast.LENGTH_SHORT).show()
+                MensajesUI.exito(requireActivity(), "Avance registrado. No olvides Guardar Cambios.")
             }
             dialogAvance.show(parentFragmentManager, "AvanceTareaDialog")
         }
@@ -165,12 +189,12 @@ class EditarTareaDialog(
                     alEliminar?.invoke(tareaAEditar!!)
                     dismiss()
                 }
-                .setNegativeButton("Cancelar", null)
-                .show()
+                .setNegativeButton("Cancelar", null).show()
         }
 
         btnGuardar.setOnClickListener {
             val titulo = etTitulo.text.toString().trim()
+            val materiaTexto = etMateria.text.toString().trim()
             val descripcionBase = etDescripcion.text.toString().trim()
             val prioridad = when (rgPrioridad.checkedRadioButtonId) {
                 R.id.rbAlta -> "ALTA"
@@ -180,7 +204,7 @@ class EditarTareaDialog(
             }
 
             if (titulo.isEmpty() || fechaSeleccionada.isEmpty() || prioridad.isEmpty()) {
-                Toast.makeText(requireContext(), "Campos obligatorios incompletos", Toast.LENGTH_SHORT).show()
+                MensajesUI.advertencia(requireActivity(), "Por favor, llena los campos con *")
                 return@setOnClickListener
             }
 
@@ -204,7 +228,6 @@ class EditarTareaDialog(
 
     override fun onStart() {
         super.onStart()
-        // ¡REDUCCIÓN DE ALTURA! Cambié de 0.85 a 0.70 (aprox. 2.5 cm menos de pantalla)
         dialog?.window?.setLayout(
             (resources.displayMetrics.widthPixels * 0.95).toInt(),
             (resources.displayMetrics.heightPixels * 0.70).toInt()

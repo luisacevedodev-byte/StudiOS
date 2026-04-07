@@ -8,14 +8,20 @@
     android:layout_marginHorizontal="4dp"
     app:cardBackgroundColor="?attr/colorSurface"
     app:cardCornerRadius="16dp"
-    app:cardElevation="2dp">
+    app:cardElevation="2dp"
+    android:animateLayoutChanges="true"> <LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
 
     <LinearLayout
+        android:id="@+id/layoutPrincipalHistorial"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:padding="16dp"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground">
 
         <LinearLayout
             android:layout_width="0dp"
@@ -28,38 +34,71 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 tools:text="Tarea Completada o Borrada"
-                android:textSize="16sp"
+                android:textSize="17sp"
                 android:textStyle="bold"
                 android:textColor="?attr/colorOnSurface"
                 android:ellipsize="end"
                 android:maxLines="1"/>
 
-            <TextView
-                android:id="@+id/tvFechaHistorial"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                tools:text="Finalizó: 2026-04-10"
-                android:textSize="14sp"
-                android:layout_marginTop="2dp"
-                android:textColor="@color/gris_texto"/>
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginTop="4dp">
+
+                <ImageView
+                    android:layout_width="14dp"
+                    android:layout_height="14dp"
+                    android:src="@android:drawable/ic_menu_recent_history"
+                    app:tint="@color/gris_texto"
+                    android:layout_marginEnd="4dp"/>
+
+                <TextView
+                    android:id="@+id/tvFechaHistorial"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    tools:text="2026-04-10"
+                    android:textSize="13sp"
+                    android:textColor="@color/gris_texto"/>
+            </LinearLayout>
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/ivFlechaHistorial"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@android:drawable/arrow_down_float"
+            app:tint="@color/gris_texto"
+            android:alpha="0.5"/>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layoutOpcionesHistorial"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="12dp"
+        android:gravity="end|center_vertical"
+        android:visibility="gone">
 
         <ImageButton
             android:id="@+id/btnRestaurar"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:layout_marginEnd="4dp"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginEnd="12dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@android:drawable/ic_menu_revert"
             app:tint="@color/studios_cyan" />
 
         <ImageButton
             android:id="@+id/btnEliminarPermanente"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_delete"
-            app:tint="#FF6B6B" />
+            android:src="@drawable/ic_basura"
+            android:scaleType="centerInside" />
     </LinearLayout>
-
+</LinearLayout>
 </com.google.android.material.card.MaterialCardView>

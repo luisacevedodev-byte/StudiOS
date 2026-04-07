@@ -33,7 +33,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:lines="3"
-                android:hint="¿Qué avanzaste hoy? (Ej. Leí el cap. 1)"
+                android:hint="¿Qué avanzaste hoy?"
                 android:inputType="textMultiLine"
                 android:textColor="?attr/colorOnSurface"/>
         </com.google.android.material.textfield.TextInputLayout>
