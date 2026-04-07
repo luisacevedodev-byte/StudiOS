@@ -1,258 +1,252 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<layout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
-    android:padding="16dp">
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <TextView
-        android:id="@+id/tvTituloFinanzas"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Finanzas"
-        android:textSize="32sp"
-        android:textStyle="bold"
-        android:textColor="@color/studios_cyan_titulo"
-        android:shadowColor="@color/studios_cyan_sombra"
-        android:shadowDx="0"
-        android:shadowDy="0"
-        android:shadowRadius="15"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/colorSurface"
+        android:padding="16dp">
 
-    <TextView
-        android:id="@+id/tvSubtituloFinanzas"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Control semanal"
-        android:textColor="@color/gris_texto"
-        android:textSize="14sp"
-        app:layout_constraintTop_toBottomOf="@id/tvTituloFinanzas"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardHistorial"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="10dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1dp"
-        app:strokeColor="?attr/colorOutlineVariant"
-        app:layout_constraintBottom_toBottomOf="@id/tvSubtituloFinanzas"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@id/tvTituloFinanzas">
-
-        <ImageButton
-            android:id="@+id/btnHistorialFinanzas"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="?attr/selectableItemBackground"
-            android:padding="10dp"
-            android:scaleType="fitCenter"
-            android:src="@android:drawable/ic_menu_recent_history"
-            app:tint="@color/gris_texto" />
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardConfiguracion"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:layout_marginEnd="12dp"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="10dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1dp"
-        app:strokeColor="?attr/colorOutlineVariant"
-        app:layout_constraintBottom_toBottomOf="@id/tvSubtituloFinanzas"
-        app:layout_constraintEnd_toStartOf="@id/cardHistorial"
-        app:layout_constraintTop_toTopOf="@id/tvTituloFinanzas">
-
-        <ImageButton
-            android:id="@+id/btnConfiguracionFinanzas"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:background="?attr/selectableItemBackground"
-            android:padding="10dp"
-            android:scaleType="fitCenter"
-            android:src="@drawable/ic_settings"
-            app:tint="@color/gris_texto" />
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardPresupuesto"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        app:cardBackgroundColor="?attr/colorSurfaceVariant"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="1dp"
-        app:strokeColor="?attr/colorOutlineVariant"
-        app:layout_constraintTop_toBottomOf="@id/tvSubtituloFinanzas"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <LinearLayout
-            android:layout_width="match_parent"
+        <TextView
+            android:id="@+id/tvTituloFinanzas"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:animateLayoutChanges="true"
-            android:padding="20dp">
+            android:text="Finanzas"
+            android:textColor="@color/studios_cyan_titulo"
+            android:textSize="32sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
-            <androidx.constraintlayout.widget.ConstraintLayout
+        <TextView
+            android:id="@+id/tvSubtituloFinanzas"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Control semanal"
+            android:textColor="@color/gris_texto"
+            android:textSize="14sp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvTituloFinanzas" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardHistorial"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="@id/tvTituloFinanzas">
+            <ImageButton
+                android:id="@+id/btnHistorialFinanzas"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@android:drawable/ic_menu_recent_history"
+                app:tint="@color/gris_texto" />
+        </com.google.android.material.card.MaterialCardView>
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Presupuesto Semanal"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintBottom_toBottomOf="parent"/>
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardConfiguracion"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="8dp"
+            app:cardBackgroundColor="?attr/colorSurface"
+            app:cardCornerRadius="10dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:layout_constraintEnd_toStartOf="@id/cardHistorial"
+            app:layout_constraintTop_toTopOf="@id/tvTituloFinanzas">
+            <ImageButton
+                android:id="@+id/btnConfiguracionFinanzas"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackground"
+                android:padding="10dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/ic_settings"
+                app:tint="@color/gris_texto" />
+        </com.google.android.material.card.MaterialCardView>
 
-                <LinearLayout
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintTop_toTopOf="parent"
-                    app:layout_constraintBottom_toBottomOf="parent">
-
-                    <ImageButton
-                        android:id="@+id/btnBorrarPresupuesto"
-                        android:layout_width="29dp"
-                        android:layout_height="29dp"
-                        android:layout_marginEnd="8dp"
-                        android:padding="4dp"
-                        android:scaleType="fitCenter"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@android:drawable/ic_menu_delete"
-                        app:tint="@color/white" />
-
-                    <ImageButton
-                        android:id="@+id/btnEditarPresupuesto"
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:padding="4dp"
-                        android:scaleType="fitCenter"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:src="@drawable/ic_editar"
-                        app:tint="?attr/colorOnSurfaceVariant" />
-                </LinearLayout>
-            </androidx.constraintlayout.widget.ConstraintLayout>
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardPresupuesto"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant"
+            app:cardCornerRadius="16dp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvSubtituloFinanzas"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorOutlineVariant">
 
             <LinearLayout
-                android:id="@+id/layoutEstadoVacio"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:animateLayoutChanges="true"
                 android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginTop="24dp"
-                android:layout_marginBottom="8dp"
-                android:visibility="visible">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Define tu presupuesto semanal"
-                    android:textColor="@color/gris_texto"
-                    android:textSize="14sp"
-                    android:layout_marginBottom="16dp"/>
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnEstablecerPresupuesto"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Establecer Presupuesto"
-                    android:textAllCaps="false"
-                    android:textColor="@color/black"
-                    app:backgroundTint="@color/studios_cyan"
-                    app:cornerRadius="12dp" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:id="@+id/layoutEstadoLleno"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:gravity="center"
-                android:layout_marginTop="16dp"
-                android:visibility="gone">
-
-                <TextView
-                    android:id="@+id/tvSaldoRestanteMonto"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    tools:text="$500.00"
-                    android:textColor="@color/studios_cyan"
-                    android:textSize="36sp"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Saldo restante"
-                    android:textColor="@color/gris_texto"
-                    android:textSize="12sp"
-                    android:layout_marginBottom="16dp"/>
-
-                <com.google.android.material.progressindicator.LinearProgressIndicator
-                    android:id="@+id/progresoPresupuesto"
-                    android:layout_width="match_parent"
-                    android:layout_height="8dp"
-                    app:indicatorColor="@color/studios_cyan_dark"
-                    app:trackColor="?attr/colorSurface"
-                    app:trackCornerRadius="4dp"
-                    tools:progress="30" />
+                android:padding="20dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp">
-
+                    android:layout_height="wrap_content">
                     <TextView
-                        android:id="@+id/tvGastado"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        tools:text="Gastado: $0.00"
-                        android:textColor="@color/gris_texto"
-                        android:textSize="12sp"
+                        android:text="Presupuesto Semanal"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textStyle="bold"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"/>
+                        app:layout_constraintTop_toTopOf="parent" />
 
+                    <ImageButton
+                        android:id="@+id/btnBorrarPresupuesto"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginEnd="8dp"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@android:drawable/ic_menu_delete"
+                        android:visibility="gone"
+                        app:layout_constraintEnd_toStartOf="@id/btnEditarPresupuesto"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+
+                    <ImageButton
+                        android:id="@+id/btnEditarPresupuesto"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:padding="6dp"
+                        android:scaleType="fitCenter"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_editar"
+                        android:visibility="gone"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutEstadoVacio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:padding="20dp">
                     <TextView
-                        android:id="@+id/tvMeta"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        tools:text="Meta: $500.00"
+                        android:text="Define tu presupuesto semanal"
+                        android:textColor="@color/gris_texto" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnEstablecerPresupuesto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:text="Establecer Presupuesto"
+                        android:textAllCaps="false"
+                        app:backgroundTint="@color/studios_cyan"
+                        android:textColor="@color/black" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutEstadoLleno"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+                    <TextView
+                        android:id="@+id/tvSaldoRestanteMonto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/studios_cyan"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        tools:text="$500.00" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Saldo restante"
                         android:textColor="@color/gris_texto"
-                        android:textSize="12sp"
-                        app:layout_constraintEnd_toEndOf="parent"
-                        app:layout_constraintTop_toTopOf="parent"/>
-                </androidx.constraintlayout.widget.ConstraintLayout>
+                        android:textSize="12sp" />
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/progresoPresupuesto"
+                        android:layout_width="match_parent"
+                        android:layout_height="8dp"
+                        android:layout_marginTop="16dp"
+                        app:indicatorColor="@color/studios_cyan"
+                        app:trackCornerRadius="4dp" />
+                    <androidx.constraintlayout.widget.ConstraintLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp">
+                        <TextView
+                            android:id="@+id/tvGastado"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            tools:text="Gastado: $0.00" />
+                        <TextView
+                            android:id="@+id/tvMeta"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="12sp"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintTop_toTopOf="parent"
+                            tools:text="Meta: $500.00" />
+                    </androidx.constraintlayout.widget.ConstraintLayout>
+                </LinearLayout>
             </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+        </com.google.android.material.card.MaterialCardView>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fabAgregarTransaccion"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="16dp"
-        android:src="@android:drawable/ic_input_add"
-        app:backgroundTint="@color/studios_cyan"
-        app:tint="@color/black"
-        app:elevation="6dp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        <TextView
+            android:id="@+id/tvMovimientosTitulo"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="Movimientos de esta semana"
+            android:textColor="?attr/colorOnSurface"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/cardPresupuesto" />
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvHistorialTransacciones"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvMovimientosTitulo" />
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fabAgregarTransaccion"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:src="@android:drawable/ic_input_add"
+            app:backgroundTint="@color/studios_cyan"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:tint="@color/black" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</layout>

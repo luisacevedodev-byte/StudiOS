@@ -17,18 +17,19 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
                 android:text="Presupuesto Semanal"
+                android:textColor="@color/studios_cyan"
                 android:textSize="18sp"
-                android:textStyle="bold"
-                android:textColor="@color/studios_cyan_titulo"
-                android:layout_marginBottom="24dp" />
+                android:textStyle="bold" />
 
             <com.google.android.material.textfield.TextInputLayout
                 style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
                 app:boxStrokeColor="@color/studios_cyan"
-                android:layout_marginBottom="24dp">
+                app:hintTextColor="@color/studios_cyan">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etMontoPresupuesto"
@@ -36,15 +37,13 @@
                     android:layout_height="wrap_content"
                     android:hint="Ej. 500.00"
                     android:inputType="numberDecimal"
-                    android:textColor="?attr/colorOnSurface"
-                    android:gravity="center_horizontal" />
+                    android:textColor="?attr/colorOnSurface" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="end">
+                android:orientation="horizontal">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnCancelarDialogo"
@@ -52,7 +51,6 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:layout_marginEnd="8dp"
                     android:text="Cancelar"
                     android:textColor="?attr/colorOnSurface" />
 
@@ -63,7 +61,8 @@
                     android:layout_weight="1"
                     android:text="Confirmar"
                     android:textColor="@color/black"
-                    app:backgroundTint="@color/studios_cyan" />
+                    app:backgroundTint="@color/studios_cyan"
+                    app:cornerRadius="12dp" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

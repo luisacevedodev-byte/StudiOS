@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
         // Cambiamos el fragmento que se carga inicialmente
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(R.id.contenedor_principal, FinanzasFragment()) // Ahora carga Finanzas
+                .replace(R.id.contenedor_principal, FinanzasFragment())
                 .commit()
         }
     }
