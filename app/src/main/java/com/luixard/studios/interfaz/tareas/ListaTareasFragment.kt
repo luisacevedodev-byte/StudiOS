@@ -33,7 +33,7 @@ class ListaTareasFragment : Fragment() {
     private var filtroChipActual = R.id.chipTodas
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.pantalla_tareas, container, false)
+        return inflater.inflate(R.layout.tarea_pantalla_tareas, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -34,7 +34,7 @@ class EditarTareaDialog(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        return inflater.inflate(R.layout.pantalla_editar_tarea, container, false)
+        return inflater.inflate(R.layout.tarea_pantalla_editar_tarea, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -65,7 +65,7 @@ class EditarTareaDialog(
             } else {
                 tvAvancesVacio.visibility = View.GONE
                 listaAvances.forEachIndexed { index, avance ->
-                    val vistaAvance = layoutInflater.inflate(R.layout.item_avance, null)
+                    val vistaAvance = layoutInflater.inflate(R.layout.tarea_item_avance, null)
 
                     val layoutPrincipal = vistaAvance.findViewById<LinearLayout>(R.id.layoutPrincipalAvance)
                     val layoutOpciones = vistaAvance.findViewById<LinearLayout>(R.id.layoutOpcionesAvance)

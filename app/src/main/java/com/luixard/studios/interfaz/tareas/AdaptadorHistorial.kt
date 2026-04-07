@@ -29,7 +29,7 @@ class AdaptadorHistorial(
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): HistorialViewHolder {
-        val vista = LayoutInflater.from(parent.context).inflate(R.layout.item_historial, parent, false)
+        val vista = LayoutInflater.from(parent.context).inflate(R.layout.tarea_item_historial, parent, false)
         return HistorialViewHolder(vista)
     }
 

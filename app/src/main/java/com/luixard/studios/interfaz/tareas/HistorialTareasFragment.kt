@@ -20,7 +20,7 @@ class HistorialTareasFragment : Fragment() {
     private val viewModel: TareasViewModel by viewModels()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.pantalla_historial_tareas, container, false)
+        return inflater.inflate(R.layout.tarea_pantalla_historial_tareas, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

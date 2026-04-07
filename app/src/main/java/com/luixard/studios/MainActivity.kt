@@ -2,17 +2,17 @@ package com.luixard.studios
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.luixard.studios.interfaz.tareas.ListaTareasFragment
+import com.luixard.studios.interfaz.finanzas.FinanzasFragment // Importamos el fragmento de finanzas
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Esto carga tu pantalla de tareas en el contenedor principal al abrir la app
+        // Cambiamos el fragmento que se carga inicialmente
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(R.id.contenedor_principal, ListaTareasFragment())
+                .replace(R.id.contenedor_principal, FinanzasFragment()) // Ahora carga Finanzas
                 .commit()
         }
     }

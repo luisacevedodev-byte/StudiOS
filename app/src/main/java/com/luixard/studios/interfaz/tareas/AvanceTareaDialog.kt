@@ -17,7 +17,7 @@ class AvanceTareaDialog(
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         dialog?.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        return inflater.inflate(R.layout.pantalla_registrar_avance, container, false)
+        return inflater.inflate(R.layout.tarea_pantalla_registrar_avance, container, false)
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
