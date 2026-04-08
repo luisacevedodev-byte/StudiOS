@@ -34,12 +34,19 @@ class AdaptadorHistorialSemanas(
         holder.binding.tvRangoFechas.text = "${formatFecha.format(semana.fecha_inicio!!)} - ${formatFecha.format(semana.fecha_fin!!)}"
         holder.binding.tvMetaItem.text = "Presupuesto: ${formatMoneda.format(semana.presupuesto_semanal_meta)}"
 
+        // NUEVO: Pedimos los detalles de inmediato para llenar los totales (Gasto, Ingreso, Restante)
+        onFetchDetails(semana.id_finanza!!) { transacciones ->
+            // Llamamos a la función pero mantenemos el detalle oculto (View.GONE)
+            actualizarTotalesCabecera(holder, transacciones, semana.presupuesto_semanal_meta)
+        }
+
         holder.binding.layoutCabecera.setOnClickListener {
             val estaExpandido = holder.binding.layoutDetalleDia.visibility == View.VISIBLE
             if (estaExpandido) {
                 holder.binding.layoutDetalleDia.visibility = View.GONE
                 holder.binding.ivFlecha.animate().rotation(0f)
             } else {
+                // Al expandir, construimos la lista visual de días
                 onFetchDetails(semana.id_finanza!!) { transacciones ->
                     construirDetallePorDia(holder, transacciones, semana.presupuesto_semanal_meta)
                     holder.binding.layoutDetalleDia.visibility = View.VISIBLE
@@ -47,6 +54,16 @@ class AdaptadorHistorialSemanas(
                 }
             }
         }
+    }
+    private fun actualizarTotalesCabecera(holder: ViewHolder, lista: List<Transaccion>, meta: Double) {
+        val formatMoneda = NumberFormat.getCurrencyInstance(Locale.getDefault())
+        val totalGasto = lista.filter { it.tipo_transaccion == "Gasto" }.sumOf { it.monto }
+        val totalIngreso = lista.filter { it.tipo_transaccion == "Ingreso" }.sumOf { it.monto }
+        val restante = (meta - totalGasto) + totalIngreso
+
+        holder.binding.tvGastadoItem.text = "Gasto: ${formatMoneda.format(totalGasto)}"
+        holder.binding.tvIngresoItem.text = "Ingreso: ${formatMoneda.format(totalIngreso)}"
+        holder.binding.tvSobranteItem.text = "Restante: ${formatMoneda.format(restante)}"
     }
 
     private fun construirDetallePorDia(holder: ViewHolder, lista: List<Transaccion>, meta: Double) {

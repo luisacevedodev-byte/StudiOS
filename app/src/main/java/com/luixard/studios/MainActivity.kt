@@ -29,6 +29,8 @@ class MainActivity : AppCompatActivity() {
         drawerLayout = findViewById(R.id.drawer_layout)
         customDrawerView = findViewById(R.id.custom_drawer_view)
 
+        val customDrawerView = findViewById<View>(R.id.custom_drawer_view)
+
         // Referencias a la Barra Superior
         val btnOpenDrawer = findViewById<ImageView>(R.id.btnOpenDrawer)
         val btnCloseDrawer = customDrawerView.findViewById<ImageView>(R.id.btnCloseDrawer)

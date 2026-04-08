@@ -177,7 +177,6 @@
                     android:gravity="center" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -185,7 +184,10 @@
             android:layout_marginStart="16dp"
             android:text="Notas Recientes"
             android:textColor="?attr/colorOnSurface"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:drawableStart="@drawable/ic_nota"
+            android:drawablePadding="8dp"
+            android:drawableTint="?attr/colorOnSurface" />
 
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
@@ -207,7 +209,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:padding="16dp"
-                    android:text="No tienes notas recientes.\nToca para agregar una nota"
+                    android:text="No tienes notas recientes."
                     android:textColor="@color/gris_texto"
                     android:gravity="center" />
             </LinearLayout>

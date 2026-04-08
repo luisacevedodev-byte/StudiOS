@@ -93,6 +93,7 @@ class NotasFragment : Fragment() {
         val tvTituloDialogo = dialogView.findViewById<TextView>(R.id.tvTituloDialogoNota)
         val etTitulo = dialogView.findViewById<TextInputEditText>(R.id.etTituloNota)
 
+
         // --- BUSCAMOS EL LAYOUT PARA PODER PINTAR EL ERROR ---
         val tilContenido = dialogView.findViewById<TextInputLayout>(R.id.tilContenidoNota)
         val etContenido = dialogView.findViewById<TextInputEditText>(R.id.etContenidoNota)
@@ -112,28 +113,21 @@ class NotasFragment : Fragment() {
             val tituloStr = etTitulo.text.toString().trim()
             val contenidoStr = etContenido.text.toString().trim()
 
-            // --- VALIDACIÓN DE ERROR VISUAL ---
+            // Validación de contenido obligatorio
             if (contenidoStr.isEmpty()) {
-                // Pintamos la caja de rojo con el error
                 tilContenido.error = "La nota no puede estar vacía"
                 return@setOnClickListener
             } else {
-                tilContenido.error = null // Limpiamos el error por si acaso
+                tilContenido.error = null
             }
 
-            val fechaActual = SimpleDateFormat("dd MMM - hh:mm a", Locale.getDefault()).format(Date())
-
             if (notaExistente == null) {
-                val nuevaNota = Nota(
-                    titulo = tituloStr,
-                    contenido = contenidoStr,
-                    fecha_creacion = fechaActual
-                )
-                viewModel.guardarNota(nuevaNota)
+                viewModel.guardarNota(tituloStr, contenidoStr)
                 MensajesUI.exito(requireActivity(), "Nota creada")
             } else {
+                val fechaActual = SimpleDateFormat("dd MMM - hh:mm a", Locale.getDefault()).format(Date())
                 val notaActualizada = notaExistente.copy(
-                    titulo = tituloStr,
+                    titulo = tituloStr.ifBlank { notaExistente.titulo },
                     contenido = contenidoStr,
                     fecha_creacion = fechaActual
                 )
