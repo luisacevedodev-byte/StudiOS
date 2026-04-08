@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">StudiOS</string>
+    <string name="open_drawer">Abrir menú</string>
+    <string name="close_drawer">Cerrar menú</string>
 </resources>
