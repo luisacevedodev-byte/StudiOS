@@ -80,7 +80,7 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
                     android:padding="16dp">
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_edit_note" app:tint="@color/gris_texto" />
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_edit_note" app:tint="@color/selector_drawer_texto" />
                     <TextView android:id="@+id/tvCountNotas" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:layout_marginTop="8dp"/>
                     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Notas" android:textColor="@color/gris_texto" android:textSize="12sp" />
                 </LinearLayout>
@@ -100,7 +100,7 @@
                     android:padding="16dp">
                     <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_danger" app:tint="#FF4C4C" />
                     <TextView android:id="@+id/tvCountUrgentes" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:layout_marginTop="8dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tareas Urgentes" android:textColor="@color/gris_texto" android:textSize="12sp" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TareaUrgentes" android:textColor="@color/gris_texto" android:textSize="12sp" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
         </GridLayout>
@@ -161,57 +161,21 @@
             app:cardCornerRadius="16dp"
             app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
-            <FrameLayout
+            <LinearLayout
+                android:id="@+id/containerTareasDashboard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/llProximaEntregaDetalle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal"
-                    android:gravity="center_vertical">
-
-                    <LinearLayout
-                        android:layout_width="0dp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:orientation="vertical">
-                        <TextView
-                            android:id="@+id/tvProximaEntregaTitulo"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="?attr/colorOnSurface"
-                            android:textStyle="bold"
-                            android:textSize="16sp"/>
-                        <TextView
-                            android:id="@+id/tvProximaEntregaFecha"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:textColor="@color/gris_texto"
-                            android:textSize="12sp"
-                            android:layout_marginTop="4dp"/>
-                    </LinearLayout>
-
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/vUrgenciaColor"
-                        android:layout_width="12dp"
-                        android:layout_height="12dp"
-                        android:layout_marginStart="16dp"
-                        app:cardCornerRadius="6dp"
-                        app:cardElevation="0dp"
-                        app:cardBackgroundColor="@color/gris_texto"/> </LinearLayout>
-
+                android:orientation="vertical"
+                android:padding="8dp">
                 <TextView
                     android:id="@+id/tvProximaEntregaVacio"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:padding="16dp"
                     android:text="No tienes entregas pendientes"
                     android:textColor="@color/gris_texto"
-                    android:gravity="center"
-                    android:visibility="gone"/>
-            </FrameLayout>
+                    android:gravity="center" />
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
@@ -232,45 +196,21 @@
             app:cardCornerRadius="16dp"
             app:cardBackgroundColor="?attr/colorSurfaceVariant">
 
-            <FrameLayout
+            <LinearLayout
+                android:id="@+id/containerNotasDashboard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:padding="16dp">
-
-                <LinearLayout
-                    android:id="@+id/llNotaRecienteDetalle"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-                    <TextView
-                        android:id="@+id/tvNotaRecienteTitulo"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Título de la nota"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold"
-                        android:textSize="16sp"/>
-                    <TextView
-                        android:id="@+id/tvNotaRecienteFecha"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Creada: dd/mm/aaaa - hh:mm"
-                        android:textColor="@color/gris_texto"
-                        android:textSize="12sp"
-                        android:layout_marginTop="4dp"/>
-                </LinearLayout>
-
+                android:orientation="vertical"
+                android:padding="8dp">
                 <TextView
                     android:id="@+id/tvNotaRecienteVacio"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:padding="16dp"
                     android:text="No tienes notas recientes.\nToca para agregar una nota"
                     android:textColor="@color/gris_texto"
-                    android:gravity="center"
-                    android:layout_marginVertical="8dp"
-                    android:visibility="gone"/>
-
-            </FrameLayout>
+                    android:gravity="center" />
+            </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
     </LinearLayout>

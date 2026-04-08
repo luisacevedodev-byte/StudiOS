@@ -113,4 +113,24 @@ class MainActivity : AppCompatActivity() {
             super.onBackPressed()
         }
     }
+
+    // Función para navegar desde el Dashboard y actualizar el menú
+    fun navegarDesdeDashboard(idDestino: Int) {
+        val customDrawerView = findViewById<android.view.View>(R.id.custom_drawer_view)
+
+        when (idDestino) {
+            R.id.nav_tareas_item -> {
+                val item = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
+                cargarFragmento(ListaTareasFragment(), item)
+            }
+            R.id.nav_finanzas_item -> {
+                val item = customDrawerView.findViewById<LinearLayout>(R.id.nav_finanzas_item)
+                cargarFragmento(FinanzasFragment(), item)
+            }
+            R.id.nav_notas_item -> {
+                val item = customDrawerView.findViewById<LinearLayout>(R.id.nav_notas_item)
+                cargarFragmento(NotasFragment(), item)
+            }
+        }
+    }
 }

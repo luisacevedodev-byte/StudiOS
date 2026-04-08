@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.core.content.ContextCompat
@@ -22,7 +23,7 @@ class DashboardFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Referencias de la UI - Contadores y Finanzas
+        // Referencias principales
         val tvTareas = view.findViewById<TextView>(R.id.tvCountTareas)
         val tvUrgentes = view.findViewById<TextView>(R.id.tvCountUrgentes)
         val tvNotas = view.findViewById<TextView>(R.id.tvCountNotas)
@@ -31,76 +32,70 @@ class DashboardFragment : Fragment() {
         val tvDetalleFinanzas = view.findViewById<TextView>(R.id.tvDetalleFinanzas)
         val pbFinanzas = view.findViewById<ProgressBar>(R.id.pbFinanzas)
 
-        // Referencias de la UI - Próxima Entrega
-        val llProximaEntregaDetalle = view.findViewById<View>(R.id.llProximaEntregaDetalle)
-        val vUrgenciaColor = view.findViewById<View>(R.id.vUrgenciaColor)
-        val tvProximaEntregaTitulo = view.findViewById<TextView>(R.id.tvProximaEntregaTitulo)
-        val tvProximaEntregaFecha = view.findViewById<TextView>(R.id.tvProximaEntregaFecha)
-        val tvProximaEntregaVacio = view.findViewById<TextView>(R.id.tvProximaEntregaVacio)
+        // Contenedores dinámicos
+        val containerTareas = view.findViewById<LinearLayout>(R.id.containerTareasDashboard)
+        val containerNotas = view.findViewById<LinearLayout>(R.id.containerNotasDashboard)
+        val tvTareasVacio = view.findViewById<TextView>(R.id.tvProximaEntregaVacio)
+        val tvNotasVacio = view.findViewById<TextView>(R.id.tvNotaRecienteVacio)
 
-        // Referencias de la UI - Notas Recientes
-        val llNotaRecienteDetalle = view.findViewById<View>(R.id.llNotaRecienteDetalle)
-        val tvNotaRecienteTitulo = view.findViewById<TextView>(R.id.tvNotaRecienteTitulo)
-        val tvNotaRecienteFecha = view.findViewById<TextView>(R.id.tvNotaRecienteFecha)
-        val tvNotaRecienteVacio = view.findViewById<TextView>(R.id.tvNotaRecienteVacio)
-
-        // --- OBSERVADORES ---
-
-        // Tareas y Próxima Entrega Detallada
+        // --- OBSERVADOR TAREAS (3 Más Próximas) ---
         viewModel.tareasPendientes.observe(viewLifecycleOwner) { tareas ->
             tvTareas.text = tareas.size.toString()
             tvUrgentes.text = viewModel.obtenerConteoUrgentes(tareas).toString()
+            containerTareas.removeAllViews() // Limpiar para actualizar
 
             if (tareas.isNotEmpty()) {
-                // Tarea más reciente (la primera de la lista)
-                val tarea = tareas[0]
-                tvProximaEntregaTitulo.text = tarea.titulo_tarea
-                tvProximaEntregaFecha.text = "Entrega: ${tarea.fecha_entrega}" // Aquí va tu fecha
+                tvTareasVacio.visibility = View.GONE
+                // Ordenar por fecha y tomar 3
+                val topTareas = tareas.sortedBy { it.fecha_entrega }.take(3)
 
-                // Lógica de color de urgencia
-                val color = when (tarea.id_prioridad?.lowercase()) {
-                    "alta" -> android.graphics.Color.RED
-                    "media" -> android.graphics.Color.parseColor("#FFA500")
-                    else -> android.graphics.Color.parseColor("#00bb2d")
+                topTareas.forEach { tarea ->
+                    val fila = LayoutInflater.from(context).inflate(R.layout.item_dashboard_fila, containerTareas, false)
+                    fila.findViewById<TextView>(R.id.tvFilaTitulo).text = tarea.titulo_tarea
+                    fila.findViewById<TextView>(R.id.tvFilaSubtitulo).text = "Entrega: ${tarea.fecha_entrega}"
+
+                    // Lógica de círculo de urgencia
+                    val color = when(tarea.id_prioridad?.lowercase()) {
+                        "alta" -> android.graphics.Color.RED
+                        "media" -> android.graphics.Color.parseColor("#FFA500")
+                        else -> ContextCompat.getColor(requireContext(), R.color.studios_cyan_titulo)
+                    }
+                    fila.findViewById<com.google.android.material.card.MaterialCardView>(R.id.vFilaColor).setCardBackgroundColor(color)
+                    containerTareas.addView(fila)
                 }
-                vUrgenciaColor.setBackgroundColor(color)
-
-                // Mostrar detalle, ocultar vacío
-                llProximaEntregaDetalle.visibility = View.VISIBLE
-                tvProximaEntregaVacio.visibility = View.GONE
-            }
+            } else { tvTareasVacio.visibility = View.VISIBLE }
         }
 
-        // Notas y Nota Reciente Detallada
+        // --- OBSERVADOR NOTAS (3 Más Recientes) ---
         viewModel.todasLasNotas.observe(viewLifecycleOwner) { notas ->
             tvNotas.text = notas.size.toString()
+            containerNotas.removeAllViews()
 
             if (notas.isNotEmpty()) {
-                // Última nota creada
-                val nota = notas.last()
-                tvNotaRecienteTitulo.text = nota.titulo
+                tvNotasVacio.visibility = View.GONE
+                // Invertir orden para que la nueva aparezca primero y tomar 3
+                val topNotas = notas.reversed().take(3)
 
-                tvNotaRecienteFecha.text = "Creada: ${nota.fecha_creacion}"
-
-                // Mostrar detalle, ocultar vacío
-                llNotaRecienteDetalle.visibility = View.VISIBLE
-                tvNotaRecienteVacio.visibility = View.GONE
-            } else {
-                // Ocultar detalle, mostrar vacío
-                llNotaRecienteDetalle.visibility = View.GONE
-                tvNotaRecienteVacio.visibility = View.VISIBLE
-            }
+                topNotas.forEach { nota ->
+                    val fila = LayoutInflater.from(context).inflate(R.layout.item_dashboard_fila, containerNotas, false)
+                    fila.findViewById<TextView>(R.id.tvFilaTitulo).text = nota.titulo
+                    fila.findViewById<TextView>(R.id.tvFilaSubtitulo).text = "Creada: ${nota.fecha_creacion}"
+                    // Ocultar círculo de color para notas
+                    fila.findViewById<View>(R.id.vFilaColor).visibility = View.GONE
+                    containerNotas.addView(fila)
+                }
+            } else { tvNotasVacio.visibility = View.VISIBLE }
         }
 
-        // Presupuesto y Finanzas (Se mantiene igual)
+        // --- LÓGICA DE FINANZAS ---
         viewModel.presupuestoActual.observe(viewLifecycleOwner) { presupuesto ->
             val meta = presupuesto?.presupuesto_semanal_meta ?: 0.0
             tvPresupuestoTotal.text = "$${String.format("%.2f", meta)}"
 
             viewModel.transaccionesSemanales.observe(viewLifecycleOwner) { transacciones ->
+                // Nombres corregidos según tu Repositorio
                 val gastos = transacciones.filter { it.tipo_transaccion == "Gasto" }.sumOf { it.monto }
                 val ingresos = transacciones.filter { it.tipo_transaccion == "Ingreso" }.sumOf { it.monto }
-
                 val saldoRestante = (meta + ingresos) - gastos
 
                 tvSaldo.text = "$${String.format("%.2f", saldoRestante)}"
