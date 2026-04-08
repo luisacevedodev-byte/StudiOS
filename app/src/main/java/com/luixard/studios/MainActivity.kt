@@ -2,7 +2,7 @@ package com.luixard.studios
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.luixard.studios.interfaz.finanzas.FinanzasFragment // Importamos el fragmento de finanzas
+import com.luixard.studios.interfaz.finanzas.FinanzasFragment
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

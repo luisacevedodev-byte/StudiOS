@@ -22,6 +22,9 @@ import java.util.Locale
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.Lifecycle
 import kotlinx.coroutines.flow.collectLatest
+import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Shader
 
 class FinanzasFragment : Fragment() {
 
@@ -39,13 +42,29 @@ class FinanzasFragment : Fragment() {
         return binding.root
     }
 
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        binding.tvTituloFinanzas.post {
+            val paint = binding.tvTituloFinanzas.paint
+            val width = paint.measureText(binding.tvTituloFinanzas.text.toString())
+            val textShader = LinearGradient(
+                0f, 0f, width, binding.tvTituloFinanzas.textSize,
+                intArrayOf(
+                    Color.parseColor("#00E5FF"), // Cian brillante
+                    Color.parseColor("#006064"), // Cian oscuro (hace el contraste del brillo)
+                    Color.parseColor("#00E5FF")  // Cian brillante
+                ),
+                null,
+                Shader.TileMode.CLAMP
+            )
+            binding.tvTituloFinanzas.paint.shader = textShader
+        }
+
         configurarRecyclerView()
         configurarListeners()
         configurarObservadores()
     }
-
     private fun configurarRecyclerView() {
         adaptadorTransacciones = AdaptadorTransacciones(
             onEdit = { transaccion -> mostrarDialogoRegistro(transaccion.tipo_transaccion == "Gasto", transaccion) },

@@ -14,7 +14,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Finanzas"
-            android:textColor="@color/studios_cyan_titulo"
+            android:textColor="@color/studios_cyan"
             android:textSize="32sp"
             android:textStyle="bold"
             app:layout_constraintStart_toStartOf="parent"

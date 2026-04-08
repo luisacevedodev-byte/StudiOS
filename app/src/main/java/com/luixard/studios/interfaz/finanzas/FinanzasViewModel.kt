@@ -45,28 +45,37 @@ class FinanzasViewModel(private val repositorio: FinanzasRepositorio) : ViewMode
     fun establecerPresupuesto(monto: Double) {
         viewModelScope.launch {
             val actual = presupuestoActual.value
-            val calendar = Calendar.getInstance()
 
-            // Si ya existe un presupuesto, usamos su ID para actualizarlo (REPLACE)
             val presupuestoParaGuardar = if (actual != null) {
                 actual.copy(presupuesto_semanal_meta = monto)
             } else {
-                // Si es la primera vez, calculamos las fechas de la semana
-                val fechaInicio = calendar.time
-                calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-                calendar.set(Calendar.HOUR_OF_DAY, 23)
-                calendar.set(Calendar.MINUTE, 59)
-                val fechaFin = calendar.time
+                // Configurar el inicio de la semana
+                val calInicio = Calendar.getInstance()
+                calInicio.firstDayOfWeek = Calendar.MONDAY
+                // Lunes de la semana actual
+                calInicio.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+                calInicio.set(Calendar.HOUR_OF_DAY, 0)
+                calInicio.set(Calendar.MINUTE, 0)
+                calInicio.set(Calendar.SECOND, 0)
+                calInicio.set(Calendar.MILLISECOND, 0)
+
+                // Configurar el fin de la semana (Domingo)
+                val calFin = Calendar.getInstance()
+                calFin.firstDayOfWeek = Calendar.MONDAY
+                calFin.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY) // Primero vamos al lunes
+                calFin.add(Calendar.DAY_OF_YEAR, 6) // Y sumamos 6 días para llegar al domingo
+                calFin.set(Calendar.HOUR_OF_DAY, 23)
+                calFin.set(Calendar.MINUTE, 59)
+                calFin.set(Calendar.SECOND, 59)
 
                 PresupuestoSemanal(
-                    id_finanza = 0, // 0 para que Room genere un nuevo ID
+                    id_finanza = 0,
                     id_usuario = null,
                     presupuesto_semanal_meta = monto,
-                    fecha_inicio = fechaInicio,
-                    fecha_fin = fechaFin
+                    fecha_inicio = calInicio.time,
+                    fecha_fin = calFin.time
                 )
             }
-
             repositorio.insertarPresupuesto(presupuestoParaGuardar)
         }
     }
