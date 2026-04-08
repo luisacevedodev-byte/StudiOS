@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:padding="16dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Resumen de tu actividad"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/studios_cyan_titulo"
+            android:shadowColor="@color/studios_cyan_sombra"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="15"
+            android:layout_marginBottom="24dp" />
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:columnCount="2"
+            android:rowCount="2"
+            android:alignmentMode="alignMargins"
+            android:layout_marginHorizontal="8dp">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_check_box" app:tint="@color/studios_cyan_titulo" />
+                    <TextView android:id="@+id/tvCountTareas" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:layout_marginTop="8dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tareas Pendientes" android:textColor="@color/gris_texto" android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_attach_money" app:tint="@color/studios_cyan_titulo" />
+                    <TextView android:id="@+id/tvSaldoSemanal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="$0.00" android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:layout_marginTop="8dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Saldo Semanal" android:textColor="@color/gris_texto" android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_edit_note" app:tint="@color/gris_texto" />
+                    <TextView android:id="@+id/tvCountNotas" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:layout_marginTop="8dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Notas" android:textColor="@color/gris_texto" android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_columnWeight="1"
+                android:layout_margin="8dp"
+                app:cardCornerRadius="16dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_danger" app:tint="#FF4C4C" />
+                    <TextView android:id="@+id/tvCountUrgentes" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="24sp" android:textStyle="bold" android:textColor="?attr/colorOnSurface" android:layout_marginTop="8dp"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tareas Urgentes" android:textColor="@color/gris_texto" android:textSize="12sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+        </GridLayout>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginHorizontal="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Presupuesto Semanal" android:textColor="?attr/colorOnSurface" android:textStyle="bold" />
+                    <TextView android:id="@+id/tvPresupuestoTotal" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_alignParentEnd="true" android:text="$0.00" android:textColor="?attr/colorOnSurface" />
+                </RelativeLayout>
+                <ProgressBar
+                    android:id="@+id/pbFinanzas"
+                    style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="12dp"
+                    android:progress="0"
+                    android:progressDrawable="@android:drawable/progress_horizontal" />
+                <TextView
+                    android:id="@+id/tvDetalleFinanzas"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="Gastado: $0.00 | Restante: $0.00"
+                    android:textColor="@color/gris_texto"
+                    android:textSize="12sp" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginStart="16dp"
+            android:text="Próximas entregas"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold"
+            android:drawableStart="@android:drawable/ic_menu_today"
+            android:drawablePadding="8dp" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginHorizontal="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:id="@+id/llProximaEntregaDetalle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+                        <TextView
+                            android:id="@+id/tvProximaEntregaTitulo"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textStyle="bold"
+                            android:textSize="16sp"/>
+                        <TextView
+                            android:id="@+id/tvProximaEntregaFecha"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/gris_texto"
+                            android:textSize="12sp"
+                            android:layout_marginTop="4dp"/>
+                    </LinearLayout>
+
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/vUrgenciaColor"
+                        android:layout_width="12dp"
+                        android:layout_height="12dp"
+                        android:layout_marginStart="16dp"
+                        app:cardCornerRadius="6dp"
+                        app:cardElevation="0dp"
+                        app:cardBackgroundColor="@color/gris_texto"/> </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvProximaEntregaVacio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No tienes entregas pendientes"
+                    android:textColor="@color/gris_texto"
+                    android:gravity="center"
+                    android:visibility="gone"/>
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:layout_marginStart="16dp"
+            android:text="Notas Recientes"
+            android:textColor="?attr/colorOnSurface"
+            android:textStyle="bold" />
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="32dp"
+            app:cardCornerRadius="16dp"
+            app:cardBackgroundColor="?attr/colorSurfaceVariant">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:id="@+id/llNotaRecienteDetalle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+                    <TextView
+                        android:id="@+id/tvNotaRecienteTitulo"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Título de la nota"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textStyle="bold"
+                        android:textSize="16sp"/>
+                    <TextView
+                        android:id="@+id/tvNotaRecienteFecha"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Creada: dd/mm/aaaa - hh:mm"
+                        android:textColor="@color/gris_texto"
+                        android:textSize="12sp"
+                        android:layout_marginTop="4dp"/>
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvNotaRecienteVacio"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No tienes notas recientes.\nToca para agregar una nota"
+                    android:textColor="@color/gris_texto"
+                    android:gravity="center"
+                    android:layout_marginVertical="8dp"
+                    android:visibility="gone"/>
+
+            </FrameLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+    </LinearLayout>
+</ScrollView>

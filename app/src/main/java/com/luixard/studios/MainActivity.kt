@@ -13,26 +13,27 @@ import androidx.fragment.app.Fragment
 import com.luixard.studios.interfaz.finanzas.FinanzasFragment
 import com.luixard.studios.interfaz.notas.NotasFragment
 import com.luixard.studios.interfaz.tareas.ListaTareasFragment
+import com.luixard.studios.interfaz.inicio.DashboardFragment // Asegúrate de tener este import
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var customDrawerView: View
-
-    // Lista para gestionar los items del menú
     private lateinit var itemsMenu: List<LinearLayout>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Inicializar Drawer y Vista Personalizada
         drawerLayout = findViewById(R.id.drawer_layout)
         customDrawerView = findViewById(R.id.custom_drawer_view)
 
+        // Referencias a la Barra Superior
         val btnOpenDrawer = findViewById<ImageView>(R.id.btnOpenDrawer)
         val btnCloseDrawer = customDrawerView.findViewById<ImageView>(R.id.btnCloseDrawer)
 
-        // Inicializar los items del menú
+        // Referencias a los items del Menú Lateral (IDs de drawer_main.xml)
         val optDashboard = customDrawerView.findViewById<LinearLayout>(R.id.nav_dashboard_item)
         val optTareas = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
         val optFinanzas = customDrawerView.findViewById<LinearLayout>(R.id.nav_finanzas_item)
@@ -40,15 +41,17 @@ class MainActivity : AppCompatActivity() {
 
         itemsMenu = listOf(optDashboard, optTareas, optFinanzas, optNotas)
 
+        // CARGA INICIAL
         if (savedInstanceState == null) {
-            cargarFragmento(ListaTareasFragment(), optTareas) // Tareas por defecto
+            cargarFragmento(DashboardFragment(), optDashboard)
         }
+
+        // --- LISTENERS ---
 
         btnOpenDrawer.setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
         btnCloseDrawer.setOnClickListener { drawerLayout.closeDrawer(GravityCompat.START) }
 
-        // Configurar clics
-        optDashboard.setOnClickListener { cargarFragmento(ListaTareasFragment(), optDashboard) }
+        optDashboard.setOnClickListener { cargarFragmento(DashboardFragment(), optDashboard) }
         optTareas.setOnClickListener { cargarFragmento(ListaTareasFragment(), optTareas) }
         optFinanzas.setOnClickListener { cargarFragmento(FinanzasFragment(), optFinanzas) }
         optNotas.setOnClickListener { cargarFragmento(NotasFragment(), optNotas) }
@@ -59,6 +62,7 @@ class MainActivity : AppCompatActivity() {
             .replace(R.id.contenedor_principal, fragmento)
             .commit()
 
+        // Esta función aplica el "brillo" al item correcto
         actualizarEstiloMenu(itemSeleccionado)
         drawerLayout.closeDrawer(GravityCompat.START)
     }
@@ -72,26 +76,27 @@ class MainActivity : AppCompatActivity() {
             val texto = item.getChildAt(1) as TextView
 
             if (item == itemActivo) {
-                // --- ESTILO PARA ITEM SELECCIONADO ---
+                // Estado Seleccionado
                 item.setBackgroundResource(R.drawable.selector_drawer_fondo)
 
-                val colorTextoIcono = if (esModoOscuro) {
+                val colorPrincipal = if (esModoOscuro) {
                     ContextCompat.getColor(this, R.color.studios_cyan)
                 } else {
                     ContextCompat.getColor(this, R.color.studios_cyan_titulo)
                 }
 
-                val colorFondoPildora = if (esModoOscuro) {
+                val colorFondo = if (esModoOscuro) {
                     android.graphics.Color.parseColor("#2600D4FF")
                 } else {
                     android.graphics.Color.parseColor("#1A007B99")
                 }
 
-                item.background?.setTint(colorFondoPildora)
-                icono.setColorFilter(colorTextoIcono)
-                texto.setTextColor(colorTextoIcono)
+                item.background?.setTint(colorFondo)
+                icono.setColorFilter(colorPrincipal)
+                texto.setTextColor(colorPrincipal)
                 texto.paint.isFakeBoldText = true
             } else {
+                // Estado Inactivo
                 item.setBackgroundResource(android.R.color.transparent)
                 icono.setColorFilter(ContextCompat.getColor(this, R.color.gris_texto))
                 texto.setTextColor(ContextCompat.getColor(this, R.color.gris_texto))
@@ -100,6 +105,7 @@ class MainActivity : AppCompatActivity() {
             texto.invalidate()
         }
     }
+
     override fun onBackPressed() {
         if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
             drawerLayout.closeDrawer(GravityCompat.START)

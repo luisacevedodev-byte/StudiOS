@@ -11,7 +11,7 @@
         android:id="@+id/tvTituloSeccionNotas"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Notas Rápidas"
+        android:text="Notas"
         android:textSize="32sp"
         android:textStyle="bold"
         android:textColor="@color/studios_cyan_titulo"
