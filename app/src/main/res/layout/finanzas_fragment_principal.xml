@@ -14,11 +14,15 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Finanzas"
-            android:textColor="@color/studios_cyan"
             android:textSize="32sp"
             android:textStyle="bold"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            android:textColor="@color/studios_cyan_titulo"
+            android:shadowColor="@color/studios_cyan_sombra"
+            android:shadowDx="0"
+            android:shadowDy="0"
+            android:shadowRadius="15"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
         <TextView
             android:id="@+id/tvSubtituloFinanzas"
