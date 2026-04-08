@@ -34,4 +34,7 @@ interface FinanzasDao {
 
     @Query("SELECT * FROM categorias_gasto")
     fun obtenerTodasLasCategorias(): Flow<List<CategoriaGasto>>
+
+    @Query("SELECT * FROM finanzas ORDER BY id_finanza DESC")
+    fun obtenerTodasLasFinanzas(): Flow<List<PresupuestoSemanal>>
 }

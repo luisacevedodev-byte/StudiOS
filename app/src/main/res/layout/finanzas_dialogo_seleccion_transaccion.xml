@@ -19,7 +19,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
                 android:text="Registrar"
-                android:textColor="@color/studios_cyan"
+                android:textColor="@color/studios_cyan_titulo"
                 android:textSize="22sp"
                 android:textStyle="bold" />
 

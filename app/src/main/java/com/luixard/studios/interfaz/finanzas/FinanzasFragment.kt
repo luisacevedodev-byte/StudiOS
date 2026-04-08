@@ -11,6 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.luixard.studios.AplicacionStudiOS
+import com.luixard.studios.R
 import com.luixard.studios.databinding.*
 import com.luixard.studios.datos.modelos.*
 import com.luixard.studios.utilidades.MensajesUI
@@ -18,6 +19,9 @@ import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Date
 import java.util.Locale
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.flow.collectLatest
 
 class FinanzasFragment : Fragment() {
 
@@ -70,6 +74,14 @@ class FinanzasFragment : Fragment() {
         binding.btnConfiguracionFinanzas.setOnClickListener { mostrarDialogoCategorias() }
         binding.fabAgregarTransaccion.setOnClickListener { mostrarDialogoSeleccion() }
 
+        // NAVEGACIÓN AL HISTORIAL
+        binding.btnHistorialFinanzas.setOnClickListener {
+            parentFragmentManager.beginTransaction()
+                .replace(R.id.contenedor_principal, HistorialFinanzasFragment())
+                .addToBackStack(null)
+                .commit()
+        }
+
         binding.btnBorrarPresupuesto.setOnClickListener {
             viewModel.presupuestoActual.value?.let { p ->
                 MaterialAlertDialogBuilder(requireContext())
@@ -83,21 +95,6 @@ class FinanzasFragment : Fragment() {
         }
     }
 
-    private fun configurarObservadores() {
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.presupuestoActual.collect { presupuesto ->
-                if (presupuesto == null) {
-                    gestionarEstadoVacio()
-                } else {
-                    gestionarEstadoLleno(presupuesto)
-                    viewModel.obtenerTransacciones(presupuesto.id_finanza!!).collect { lista ->
-                        actualizarListaMovimientos(presupuesto, lista)
-                    }
-                }
-            }
-        }
-    }
-
     private fun gestionarEstadoVacio() {
         binding.layoutEstadoVacio.visibility = View.VISIBLE
         binding.layoutEstadoLleno.visibility = View.GONE
@@ -105,6 +102,30 @@ class FinanzasFragment : Fragment() {
         binding.btnBorrarPresupuesto.visibility = View.GONE
         binding.tvMovimientosTitulo.visibility = View.GONE
         binding.rvHistorialTransacciones.visibility = View.GONE
+
+        val format = NumberFormat.getCurrencyInstance(Locale.getDefault())
+        binding.tvMeta.text = "Meta: ${format.format(0.0)}"
+        binding.tvSaldoRestanteMonto.text = format.format(0.0)
+        binding.tvGastado.text = "Gastado: ${format.format(0.0)}"
+        binding.progresoPresupuesto.progress = 0
+
+        adaptadorTransacciones.submitList(emptyList())
+    }
+    private fun configurarObservadores() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.presupuestoActual.collectLatest { presupuesto ->
+                    if (presupuesto == null) {
+                        gestionarEstadoVacio()
+                    } else {
+                        gestionarEstadoLleno(presupuesto)
+                        viewModel.obtenerTransacciones(presupuesto.id_finanza!!).collect { lista ->
+                            actualizarListaMovimientos(presupuesto, lista)
+                        }
+                    }
+                }
+            }
+        }
     }
 
     private fun gestionarEstadoLleno(presupuesto: PresupuestoSemanal) {
@@ -167,8 +188,7 @@ class FinanzasFragment : Fragment() {
                 regBinding.spinnerCategoria.setAdapter(adapterSpinner)
 
                 if (transaccionAEditar != null && esGasto) {
-                    val index = nombres.indexOf(transaccionAEditar.nota_transaccion)
-                    if (index != -1) regBinding.spinnerCategoria.setText(nombres[index], false)
+                    regBinding.spinnerCategoria.setText(transaccionAEditar.nota_transaccion, false)
                 }
             }
         }
@@ -218,7 +238,6 @@ class FinanzasFragment : Fragment() {
 
         val adapterCat = AdaptadorCategorias(
             onDelete = { categoriaSeleccionada: CategoriaGasto ->
-                // NUEVA CONFIRMACIÓN DE BORRADO
                 MaterialAlertDialogBuilder(requireContext())
                     .setTitle("¿Eliminar categoría?")
                     .setMessage("¿Seguro que desea borrar la categoría?")

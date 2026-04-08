@@ -22,7 +22,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Categorías"
-                    android:textColor="@color/studios_cyan"
+                    android:textColor="@color/studios_cyan_titulo"
                     android:textSize="20sp"
                     android:textStyle="bold"
                     app:layout_constraintStart_toStartOf="parent"
@@ -64,7 +64,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="match_parent"
                     android:text="Añadir"
-                    app:backgroundTint="@color/studios_cyan"
+                    app:backgroundTint="@color/studios_cyan_titulo"
                     android:textColor="@color/black"
                     app:cornerRadius="12dp" />
             </LinearLayout>

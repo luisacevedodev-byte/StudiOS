@@ -19,7 +19,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
                 android:text="Presupuesto Semanal"
-                android:textColor="@color/studios_cyan"
+                android:textColor="@color/studios_cyan_titulo"
                 android:textSize="18sp"
                 android:textStyle="bold" />
 
@@ -28,7 +28,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
-                app:boxStrokeColor="@color/studios_cyan"
+                app:boxStrokeColor="@color/studios_cyan_titulo"
                 app:hintTextColor="@color/studios_cyan">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -61,7 +61,7 @@
                     android:layout_weight="1"
                     android:text="Confirmar"
                     android:textColor="@color/black"
-                    app:backgroundTint="@color/studios_cyan"
+                    app:backgroundTint="@color/studios_cyan_titulo"
                     app:cornerRadius="12dp" />
             </LinearLayout>
         </LinearLayout>

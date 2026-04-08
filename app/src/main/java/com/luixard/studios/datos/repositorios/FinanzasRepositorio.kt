@@ -39,6 +39,10 @@ class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
         finanzasDao.eliminarCategoria(categoria)
     }
 
+    fun obtenerHistorialSemanas(): Flow<List<PresupuestoSemanal>> {
+        return finanzasDao.obtenerTodasLasFinanzas()
+    }
+
     fun calcularSaldoRestante(presupuestoMeta: Double, transacciones: List<Transaccion>): Double {
         var saldo = presupuestoMeta
         for (t in transacciones) {
