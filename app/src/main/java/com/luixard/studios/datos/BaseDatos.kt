@@ -8,6 +8,7 @@ import androidx.room.TypeConverters
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.luixard.studios.datos.dao.TareaDao
 import com.luixard.studios.datos.dao.FinanzasDao
+import com.luixard.studios.datos.dao.NotaDao
 import com.luixard.studios.datos.modelos.*
 import com.luixard.studios.datos.utilidades.Converters
 import kotlinx.coroutines.CoroutineScope
@@ -15,8 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 @Database(
-    entities = [Tarea::class, Materia::class, PresupuestoSemanal::class, Transaccion::class, CategoriaGasto::class],
-    version = 7,
+    entities = [Tarea::class, Materia::class, PresupuestoSemanal::class, Transaccion::class, CategoriaGasto::class, Nota::class],
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -24,6 +25,7 @@ abstract class BaseDatos : RoomDatabase() {
 
     abstract fun tareaDao(): TareaDao
     abstract fun finanzasDao(): FinanzasDao
+    abstract fun notaDao(): NotaDao
 
     companion object {
         @Volatile

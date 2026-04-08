@@ -2,7 +2,7 @@ package com.luixard.studios
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import com.luixard.studios.interfaz.finanzas.FinanzasFragment
+import com.luixard.studios.interfaz.notas.NotasFragment
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -12,7 +12,7 @@ class MainActivity : AppCompatActivity() {
         // Cambiamos el fragmento que se carga inicialmente
         if (savedInstanceState == null) {
             supportFragmentManager.beginTransaction()
-                .replace(R.id.contenedor_principal, FinanzasFragment())
+                .replace(R.id.contenedor_principal, NotasFragment())
                 .commit()
         }
     }
