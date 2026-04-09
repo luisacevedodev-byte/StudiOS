@@ -13,6 +13,7 @@
         android:layout_marginBottom="16dp">
 
         <TextView
+            android:id="@+id/tvTituloVincular"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Vincular Cuenta"
@@ -20,8 +21,6 @@
             android:textSize="22sp"
             android:textStyle="bold"
             android:shadowColor="@color/studios_cyan_sombra"
-            android:shadowDx="0"
-            android:shadowDy="0"
             android:shadowRadius="15"/>
 
         <ImageButton

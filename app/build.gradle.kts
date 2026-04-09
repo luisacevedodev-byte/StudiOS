@@ -88,4 +88,9 @@ dependencies {
 
     // 3. Para el login con el botón de Google
     implementation("com.google.android.gms:play-services-auth:21.0.0")
+
+    //Para el codigo de 5 digitos
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    implementation("com.google.firebase:firebase-firestore")
 }
