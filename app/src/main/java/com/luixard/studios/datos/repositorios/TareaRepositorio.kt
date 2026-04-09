@@ -11,8 +11,11 @@ class TareaRepositorio(private val tareaDao: TareaDao) {
     val tareasBorradas = tareaDao.obtenerTareasBorradas()
     val totalTareas = tareaDao.contarTareasTotales()
     val totalTareasCompletadas = tareaDao.contarTareasCompletadas()
+    val todasLasTareas = tareaDao.obtenerTodasLasTareas()
 
     // ---------------- ACCIONES CRUD ----------------
+
+
     suspend fun agregarTarea(tarea: Tarea) {
         tareaDao.insertarTarea(tarea)
     }
@@ -35,5 +38,10 @@ class TareaRepositorio(private val tareaDao: TareaDao) {
 
     suspend fun restaurarTarea(id: Int) {
         tareaDao.restaurarTarea(id)
+    }
+
+    suspend fun insertarListaTareas(lista: List<Tarea>) {
+        // Primero necesitamos que el DAO tenga un @Insert con OnConflictStrategy.REPLACE
+        tareaDao.insertarLista(lista)
     }
 }

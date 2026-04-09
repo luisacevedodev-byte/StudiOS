@@ -16,6 +16,9 @@ interface TareaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarTarea(tarea: Tarea)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarLista(tareas: List<Tarea>)
+
     // Editar tarea existente
     @Update
     suspend fun actualizarTarea(tarea: Tarea)
@@ -55,4 +58,8 @@ interface TareaDao {
 
     @Query("SELECT COUNT(*) FROM tareas WHERE es_completada = 1")
     fun contarTareasCompletadas(): kotlinx.coroutines.flow.Flow<Int>
+
+    // En TareaDao.kt
+    @Query("SELECT * FROM tareas") // "tareas" debe ser el nombre de tu tabla en @Entity
+    fun obtenerTodasLasTareas(): kotlinx.coroutines.flow.Flow<List<Tarea>>
 }

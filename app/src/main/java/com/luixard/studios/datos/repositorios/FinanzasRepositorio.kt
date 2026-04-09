@@ -10,6 +10,7 @@ class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
 
     val presupuestoActual = finanzasDao.obtenerPresupuestoActual()
     val categorias = finanzasDao.obtenerTodasLasCategorias()
+    val todosLosRegistros = finanzasDao.obtenerTodasLasFinanzas()
 
     suspend fun insertarPresupuesto(presupuesto: PresupuestoSemanal) {
         finanzasDao.insertarPresupuesto(presupuesto)

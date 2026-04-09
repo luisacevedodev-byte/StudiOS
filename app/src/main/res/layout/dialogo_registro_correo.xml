@@ -15,26 +15,22 @@
         android:layout_marginBottom="24dp">
 
         <ImageButton
-            android:id="@+id/btnRegresar"
+            android:id="@+id/btnRegresarRegistro"
             android:layout_width="32dp"
             android:layout_height="32dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_arrow_back"
-            app:tint="@color/selector_drawer_texto"
+            app:tint="@color/gris_texto"
             android:layout_marginEnd="16dp"/>
 
         <TextView
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Vincular Cuenta"
+            android:text="Crear Cuenta"
             android:textColor="@color/studios_cyan_titulo"
             android:textSize="22sp"
-            android:textStyle="bold"
-            android:shadowColor="@color/studios_cyan_sombra"
-            android:shadowDx="0"
-            android:shadowDy="0"
-            android:shadowRadius="15"/>
+            android:textStyle="bold" />
 
         <ImageButton
             android:id="@+id/btnCerrarRegistro"
@@ -44,6 +40,32 @@
             android:src="@drawable/ic_close"
             app:tint="@color/gris_texto" />
     </LinearLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nombre(s)"
+        android:layout_marginBottom="12dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etNombreRegistro"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapWords" />
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <com.google.android.material.textfield.TextInputLayout
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Apellidos"
+        android:layout_marginBottom="12dp">
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etApellidoRegistro"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textCapWords" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilCorreo"

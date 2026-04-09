@@ -37,6 +37,7 @@ class MainActivity : AppCompatActivity() {
         // Referencia a la cabecera del menú (Donde está el icono y "Mi perfil")
         val headerPerfil = customDrawerView.findViewById<View>(R.id.nav_header_perfil)
         val IconoPerfil = customDrawerView.findViewById<View>(R.id.nav_img_perfil)
+        val btnNavVincular = findViewById<com.google.android.material.button.MaterialButton>(R.id.btnNavVincular)
 
         // Referencias a los items del Menú Lateral (IDs de drawer_main.xml)
         val optDashboard = customDrawerView.findViewById<LinearLayout>(R.id.nav_dashboard_item)
@@ -51,6 +52,15 @@ class MainActivity : AppCompatActivity() {
             cargarFragmento(DashboardFragment(), optDashboard)
         }
 
+        // Controlar visibilidad según la sesión de btnNavVincular
+        com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener { auth ->
+            if (auth.currentUser != null) {
+                btnNavVincular.visibility = android.view.View.GONE
+            } else {
+                btnNavVincular.visibility = android.view.View.VISIBLE
+            }
+        }
+
         // --- LISTENERS ---
 
         btnOpenDrawer.setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
@@ -60,6 +70,22 @@ class MainActivity : AppCompatActivity() {
         optTareas.setOnClickListener { cargarFragmento(ListaTareasFragment(), optTareas) }
         optFinanzas.setOnClickListener { cargarFragmento(FinanzasFragment(), optFinanzas) }
         optNotas.setOnClickListener { cargarFragmento(NotasFragment(), optNotas) }
+
+        btnNavVincular.setOnClickListener {
+            // Cerramos el drawer primero
+            // drawerLayout.closeDrawers()
+
+            // Navegamos al PerfilFragment pasando un "argumento" para abrir el diálogo
+            val bundle = Bundle().apply {
+                putBoolean("abrirVincularDirecto", true)
+            }
+
+
+            val perfilFrag = PerfilFragment().apply { arguments = bundle }
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.contenedor_principal, perfilFrag)
+                .commit()
+        }
 
         // LISTENER PARA EL PERFIL
         headerPerfil?.setOnClickListener {
@@ -81,6 +107,35 @@ class MainActivity : AppCompatActivity() {
             // Pasamos null para que se quite la iluminación azul de todas las opciones del menú
             actualizarEstiloMenu(null)
             drawerLayout.closeDrawer(GravityCompat.START)
+        }
+
+        // Dentro de onCreate en MainActivity.kt
+
+        val ivStatus = findViewById<ImageView>(R.id.ivOffline)
+        val tvStatus = findViewById<TextView>(R.id.tvStatusText)
+
+        com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener { auth ->
+            val user = auth.currentUser
+
+            if (user != null) {
+                // --- ESTADO ONLINE ---
+                ivStatus.setImageResource(R.drawable.ic_wifi_on)
+                tvStatus.text = "Online"
+
+                // Cambiamos el color a Cyan para que se note que hay conexión
+                val colorCyan = androidx.core.content.ContextCompat.getColor(this, R.color.studios_cyan_titulo)
+                ivStatus.setColorFilter(colorCyan)
+                tvStatus.setTextColor(colorCyan)
+            } else {
+                // --- ESTADO OFFLINE ---
+                ivStatus.setImageResource(R.drawable.ic_wifi_off)
+                tvStatus.text = "Offline"
+
+                // Volvemos al gris normal
+                val colorGris = androidx.core.content.ContextCompat.getColor(this, R.color.gris_texto)
+                ivStatus.setColorFilter(colorGris)
+                tvStatus.setTextColor(colorGris)
+            }
         }
     }
 
@@ -162,4 +217,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
+
+
 }
