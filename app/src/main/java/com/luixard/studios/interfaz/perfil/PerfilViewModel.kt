@@ -9,6 +9,7 @@ import com.google.firebase.Timestamp
 import com.luixard.studios.datos.repositorios.AuthRepositorio
 import com.luixard.studios.datos.repositorios.TareaRepositorio
 import com.luixard.studios.datos.repositorios.FinanzasRepositorio
+import com.luixard.studios.datos.remoto.EmailJSManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.combine
@@ -30,7 +31,7 @@ class PerfilViewModel(
     private val repositorioAuth: AuthRepositorio,
     private val repositorioFinanzas: FinanzasRepositorio
 ) : ViewModel() {
-
+    private val emailManager = com.luixard.studios.datos.remoto.EmailJSManager()
     val porcentajeTareas = MutableLiveData(0)
     val porcentajeAsistencia = MutableLiveData(0)
     val usuarioLogueado = MutableLiveData(false)
@@ -38,6 +39,7 @@ class PerfilViewModel(
     val correoUsuario = MutableLiveData("")
     val estaCargandoRespaldo = MutableLiveData(false)
     val respaldoEncontrado = MutableLiveData<Map<String, Any>?>(null)
+    val codigoVerificacion get() = emailManager.getCodigoActual()
 
 
 
@@ -186,24 +188,11 @@ class PerfilViewModel(
     }
 
     // --- EMAILJS ---
-    fun generarCodigoVerificacion(): String {
-        codigoGenerado = (10000..99999).random().toString()
-        return codigoGenerado
-    }
-
-    fun prepararDatosEmail(nom: String, cor: String) = mapOf(
-        "service_id" to "service_90aab1h",
-        "template_id" to "template_rbivst8",
-        "user_id" to "akRDSWMA2agOzDoiW",
-        "template_params" to mapOf("nombre_usuario" to nom, "codigo" to codigoGenerado, "to_email" to cor)
-    )
-
-    fun enviarEmail(datos: Map<String, Any>) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val client = OkHttpClient()
-            val body = JSONObject(datos).toString().toRequestBody("application/json".toMediaType())
-            val request = Request.Builder().url("https://api.emailjs.com/api/v1.0/email/send").post(body).build()
-            try { client.newCall(request).execute() } catch (e: Exception) { e.printStackTrace() }
+    fun enviarCodigoAlCorreo(nombre: String, correo: String) {
+        viewModelScope.launch {
+            emailManager.generarCodigoVerificacion()
+            val datos = emailManager.prepararDatosEmail(nombre, correo)
+            emailManager.enviarEmail(datos)
         }
     }
 }

@@ -192,8 +192,7 @@ class PerfilFragment : Fragment() {
             val pas = etPas?.text.toString()
 
             if (nom.isNotEmpty() && pas == etConf?.text.toString() && pas.length >= 6) {
-                viewModel.generarCodigoVerificacion()
-                viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
+                viewModel.enviarCodigoAlCorreo(nom, cor)
                 dialog.dismiss()
                 mostrarDialogoVerificacion(cor, pas, nom, ape, "registro")
             } else {
@@ -206,35 +205,44 @@ class PerfilFragment : Fragment() {
     private fun mostrarDialogoVerificacion(cor: String, pas: String, nom: String, ape: String, tipo: String) {
         val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialogo_verificacion_codigo, null)
         val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(view).setBackground(ColorDrawable(Color.TRANSPARENT)).create()
+            .setView(view)
+            .setBackground(ColorDrawable(Color.TRANSPARENT))
+            .create()
 
-        view.findViewById<TextView>(R.id.tvCorreoDestino).text = cor
+        // Mostramos el correo al que se envió el código
+        view.findViewById<TextView>(R.id.tvCorreoDestino)?.text = cor
 
         view.findViewById<MaterialButton>(R.id.btnVerificarCodigo).setOnClickListener {
-            val codigo = view.findViewById<TextInputEditText>(R.id.etCodigoVerificacion).text.toString()
-            if (codigo == viewModel.codigoGenerado) {
+            val codigoIngresado = view.findViewById<TextInputEditText>(R.id.etCodigoVerificacion)?.text.toString().trim()
+
+            // 1. Verificamos contra el código que tiene el ViewModel (generado por EmailJSManager)
+            if (codigoIngresado == viewModel.codigoVerificacion) {
+                dialog.dismiss()
+
                 if (tipo == "registro") {
+                    // 2. Procedemos a crear la cuenta en Firebase
                     FirebaseAuth.getInstance().createUserWithEmailAndPassword(cor, pas).addOnSuccessListener {
-                        // 1. GUARDADO LOCAL INMEDIATO
+
                         guardarNombreUsuario("$nom $ape")
 
-                        // 2. SUBIDA A LA NUBE
+                        // 3. Subimos los datos iniciales a Firestore (Módulo Académico y Financiero)
                         viewModel.iniciarRespaldoTotal(nom, ape)
 
-                        dialog.dismiss()
-                        MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con éxito!")
-                    }.addOnFailureListener {
-                        MensajesUI.error(requireActivity(), "Error al crear cuenta: ${it.message}")
+                        MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con éxito, $nom!")
+
+                    }.addOnFailureListener { e ->
+                        MensajesUI.error(requireActivity(), "Error al registrar: ${e.message}")
                     }
                 } else {
-                    dialog.dismiss()
-                    MensajesUI.exito(requireActivity(), "Código verificado")
-                    // Aquí iría la lógica de recuperar contraseña
+                    // Aquí podrías manejar la lógica para recuperación de contraseña si el tipo fuera "recuperar"
+                    MensajesUI.exito(requireActivity(), "Código verificado correctamente")
                 }
             } else {
-                MensajesUI.error(requireActivity(), "El código no coincide")
+                // 4. El código no coincide
+                MensajesUI.error(requireActivity(), "El código ingresado es incorrecto")
             }
         }
+
         dialog.show()
     }
 
