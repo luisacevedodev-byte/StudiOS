@@ -174,10 +174,13 @@ class FinanzasFragment : Fragment() {
         val regBinding = FinanzasDialogoNuevoGastoBinding.inflate(layoutInflater)
         val dialog = MaterialAlertDialogBuilder(requireContext()).setView(regBinding.root).create()
 
+        // Variable para guardar la lista de categorías y poder buscar el ID después
+        var listaActualCategorias = emptyList<CategoriaGasto>()
+
         if (transaccionAEditar != null) {
-            regBinding.tvTituloGasto.text = if (esGasto) "Gasto" else "Ingreso Extra"
+            regBinding.tvTituloGasto.text = if (esGasto) "Editar Gasto" else "Editar Ingreso"
             regBinding.etMontoGasto.setText(transaccionAEditar.monto.toString())
-            regBinding.etNotaGasto.setText(transaccionAEditar.nota_transaccion)
+            regBinding.etNotaGasto.setText(transaccionAEditar.nota_transaccion) // Nota en el campo de nota
             regBinding.btnGuardarGasto.text = "Guardar Cambios"
         }
 
@@ -185,39 +188,46 @@ class FinanzasFragment : Fragment() {
             regBinding.tilCategoriaTransaccion.visibility = View.GONE
         }
 
+        // Cargamos las categorías en el Spinner
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.categorias.collect { listaCategorias: List<CategoriaGasto> ->
+            viewModel.categorias.collect { listaCategorias ->
+                listaActualCategorias = listaCategorias
                 val nombres = listaCategorias.map { it.nombre_categoria }
                 val adapterSpinner = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, nombres)
                 regBinding.spinnerCategoria.setAdapter(adapterSpinner)
 
+                // CORRECCIÓN 1: Al editar, buscamos el nombre de la categoría por su ID, no por la nota
                 if (transaccionAEditar != null && esGasto) {
-                    regBinding.spinnerCategoria.setText(transaccionAEditar.nota_transaccion, false)
+                    val categoria = listaCategorias.find { it.id_categoria == transaccionAEditar.id_categoria }
+                    regBinding.spinnerCategoria.setText(categoria?.nombre_categoria, false)
                 }
             }
         }
 
         regBinding.btnGuardarGasto.setOnClickListener {
-            regBinding.etMontoGasto.error = null
-            regBinding.tilCategoriaTransaccion.error = null
-
             val montoStr = regBinding.etMontoGasto.text.toString()
             val catStr = regBinding.spinnerCategoria.text.toString()
+            val notaStr = regBinding.etNotaGasto.text.toString()
 
             val montoValido = montoStr.isNotEmpty() && montoStr.toDouble() > 0
             val categoriaValida = !esGasto || catStr.isNotEmpty()
 
             if (montoValido && categoriaValida) {
                 viewModel.presupuestoActual.value?.let { presupuesto ->
+
+                    // CORRECCIÓN 2: Buscamos el ID real de la categoría seleccionada
+                    val categoriaSeleccionada = listaActualCategorias.find { it.nombre_categoria == catStr }
+
                     val transaccion = Transaccion(
                         id_transaccion = transaccionAEditar?.id_transaccion ?: 0,
                         id_usuario = null,
-                        id_finanza = presupuesto.id_finanza!!,
-                        id_categoria = null,
+                        id_finanza = presupuesto.id_finanza,
+                        id_categoria = if (esGasto) categoriaSeleccionada?.id_categoria else null, // Guardamos el ID real
                         tipo_transaccion = if (esGasto) "Gasto" else "Ingreso",
                         monto = montoStr.toDouble(),
                         fecha_transaccion = transaccionAEditar?.fecha_transaccion ?: Date(),
-                        nota_transaccion = regBinding.etNotaGasto.text.toString().ifEmpty {
+                        // CORRECCIÓN 3: La nota es la nota, y si está vacía, usamos el nombre de la categoría como respaldo
+                        nota_transaccion = notaStr.ifEmpty {
                             if (esGasto) catStr else "Ingreso Extra"
                         }
                     )
