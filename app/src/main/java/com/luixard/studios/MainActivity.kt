@@ -13,7 +13,8 @@ import androidx.fragment.app.Fragment
 import com.luixard.studios.interfaz.finanzas.FinanzasFragment
 import com.luixard.studios.interfaz.notas.NotasFragment
 import com.luixard.studios.interfaz.tareas.ListaTareasFragment
-import com.luixard.studios.interfaz.inicio.DashboardFragment // Asegúrate de tener este import
+import com.luixard.studios.interfaz.inicio.DashboardFragment
+import com.luixard.studios.interfaz.perfil.PerfilFragment // NUEVO IMPORT PARA EL PERFIL
 
 class MainActivity : AppCompatActivity() {
 
@@ -29,11 +30,12 @@ class MainActivity : AppCompatActivity() {
         drawerLayout = findViewById(R.id.drawer_layout)
         customDrawerView = findViewById(R.id.custom_drawer_view)
 
-        val customDrawerView = findViewById<View>(R.id.custom_drawer_view)
-
         // Referencias a la Barra Superior
         val btnOpenDrawer = findViewById<ImageView>(R.id.btnOpenDrawer)
         val btnCloseDrawer = customDrawerView.findViewById<ImageView>(R.id.btnCloseDrawer)
+
+        // Referencia a la cabecera del menú (Donde está el icono y "Mi perfil")
+        val headerPerfil = customDrawerView.findViewById<View>(R.id.nav_header_perfil)
 
         // Referencias a los items del Menú Lateral (IDs de drawer_main.xml)
         val optDashboard = customDrawerView.findViewById<LinearLayout>(R.id.nav_dashboard_item)
@@ -57,9 +59,24 @@ class MainActivity : AppCompatActivity() {
         optTareas.setOnClickListener { cargarFragmento(ListaTareasFragment(), optTareas) }
         optFinanzas.setOnClickListener { cargarFragmento(FinanzasFragment(), optFinanzas) }
         optNotas.setOnClickListener { cargarFragmento(NotasFragment(), optNotas) }
+
+        // LISTENER PARA EL PERFIL (NUEVO)
+        headerPerfil?.setOnClickListener {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.contenedor_principal, PerfilFragment())
+                .addToBackStack(null) // Permite usar el botón "Atrás" del celular para volver al menú anterior
+                .commit()
+
+            // Pasamos null para que se quite la iluminación azul de todas las opciones del menú
+            actualizarEstiloMenu(null)
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
     }
 
     private fun cargarFragmento(fragmento: Fragment, itemSeleccionado: LinearLayout) {
+        // Limpiar el historial de fragmentos para no apilar pantallas infinitamente si vamos y venimos del Perfil
+        supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
+
         supportFragmentManager.beginTransaction()
             .replace(R.id.contenedor_principal, fragmento)
             .commit()
@@ -69,7 +86,8 @@ class MainActivity : AppCompatActivity() {
         drawerLayout.closeDrawer(GravityCompat.START)
     }
 
-    private fun actualizarEstiloMenu(itemActivo: LinearLayout) {
+    // MODIFICADO: itemActivo ahora permite valores "null" para cuando estemos en el perfil
+    private fun actualizarEstiloMenu(itemActivo: LinearLayout?) {
         val uiMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         val esModoOscuro = uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
 
