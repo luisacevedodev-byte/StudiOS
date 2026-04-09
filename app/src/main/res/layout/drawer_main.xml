@@ -43,6 +43,7 @@
         android:gravity="center">
 
         <ImageView
+            android:id="@+id/nav_img_perfil"
             android:layout_width="80dp"
             android:layout_height="80dp"
             android:src="@drawable/ic_person_circle"

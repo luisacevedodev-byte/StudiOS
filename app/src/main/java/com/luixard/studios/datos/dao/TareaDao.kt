@@ -49,4 +49,10 @@ interface TareaDao {
     // Restaurar una tarea (Quitarla de completada o de la papelera)
     @Query("UPDATE tareas SET es_completada = 0, esta_borrada = 0 WHERE id_tarea = :id")
     suspend fun restaurarTarea(id: Int)
+
+    @Query("SELECT COUNT(*) FROM tareas")
+    fun contarTareasTotales(): kotlinx.coroutines.flow.Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM tareas WHERE es_completada = 1")
+    fun contarTareasCompletadas(): kotlinx.coroutines.flow.Flow<Int>
 }

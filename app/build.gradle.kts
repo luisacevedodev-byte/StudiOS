@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     id("com.google.devtools.ksp") version "2.0.21-1.0.27"
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -72,4 +73,19 @@ dependencies {
 
     // Librería necesaria para usar 'by viewModels()' en los Fragmentos
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+
+
+    // --- FIREBASE Y AUTENTICACIÓN (SPRINT 4) ---
+
+    // 1. Importa la plataforma (BoM) de Firebase (Usa la versión más reciente que tenías: 34.11.0)
+    implementation(platform("com.google.firebase:firebase-bom:34.11.0"))
+
+    // 2. Librerías de Firebase (Fíjate que usan comillas dobles y paréntesis)
+    // Cuando usas el BoM arriba, ya no necesitas poner la versión en estas líneas de abajo
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")      // Para iniciar sesión
+    implementation("com.google.firebase:firebase-firestore") // Para respaldar la base de datos
+
+    // 3. Para el login con el botón de Google
+    implementation("com.google.android.gms:play-services-auth:21.0.0")
 }

@@ -9,6 +9,8 @@ class TareaRepositorio(private val tareaDao: TareaDao) {
     val tareasPendientes = tareaDao.obtenerTareasPendientes()
     val tareasCompletadas = tareaDao.obtenerTareasCompletadas()
     val tareasBorradas = tareaDao.obtenerTareasBorradas()
+    val totalTareas = tareaDao.contarTareasTotales()
+    val totalTareasCompletadas = tareaDao.contarTareasCompletadas()
 
     // ---------------- ACCIONES CRUD ----------------
     suspend fun agregarTarea(tarea: Tarea) {

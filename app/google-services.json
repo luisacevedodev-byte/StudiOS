@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "325522175519",
+    "project_id": "studios-f2de8",
+    "storage_bucket": "studios-f2de8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:325522175519:android:d0b1c2aae84b9793b1472a",
+        "android_client_info": {
+          "package_name": "com.luixard.studios"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdS0qe0Pm-itYWfaDNk8VyP1WSI7wERkM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
