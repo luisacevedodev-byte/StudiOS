@@ -72,10 +72,6 @@ class MainActivity : AppCompatActivity() {
         optNotas.setOnClickListener { cargarFragmento(NotasFragment(), optNotas) }
 
         btnNavVincular.setOnClickListener {
-            // Cerramos el drawer primero
-            // drawerLayout.closeDrawers()
-
-            // Navegamos al PerfilFragment pasando un "argumento" para abrir el diálogo
             val bundle = Bundle().apply {
                 putBoolean("abrirVincularDirecto", true)
             }
@@ -93,6 +89,7 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.contenedor_principal, PerfilFragment())
                 .addToBackStack(null)
                 .commit()
+
 
             // Pasamos null para que se quite la iluminación azul de todas las opciones del menú
             actualizarEstiloMenu(null)

@@ -26,6 +26,8 @@ class TareaRepositorio(private val tareaDao: TareaDao) {
         tareaDao.eliminarTareaPermanente(tarea)
     }
 
+    suspend fun eliminarTodas() = tareaDao.eliminarTodas()
+
     // ---------------- ACCIONES RÁPIDAS ----------------
     // Como en el DAO pedimos el ID para estas acciones, aquí también se lo pasamos
     suspend fun moverPapelera(id: Int) {
@@ -38,6 +40,10 @@ class TareaRepositorio(private val tareaDao: TareaDao) {
 
     suspend fun restaurarTarea(id: Int) {
         tareaDao.restaurarTarea(id)
+    }
+
+    suspend fun restaurarTareasMasivo(tareas: List<Tarea>) {
+        tareaDao.insertarListaTareas(tareas)
     }
 
     suspend fun insertarListaTareas(lista: List<Tarea>) {

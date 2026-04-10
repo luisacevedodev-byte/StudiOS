@@ -11,6 +11,13 @@ interface FinanzasDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarPresupuesto(presupuesto: PresupuestoSemanal): Long
 
+    @Query("DELETE FROM finanzas")
+    suspend fun eliminarTodasLasFinanzas()
+
+    @Query("DELETE FROM transacciones")
+    suspend fun eliminarTodasLasTransacciones()
+
+
     @Delete
     suspend fun eliminarPresupuesto(presupuesto: PresupuestoSemanal)
 

@@ -55,4 +55,26 @@ class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
         }
         return saldo
     }
+
+    suspend fun restaurarDatosFinanzas(listaFinanzas: List<PresupuestoSemanal>) {
+        val hoy = System.currentTimeMillis()
+
+        listaFinanzas.forEach { finanza ->
+            if ((finanza.fecha_fin?.time ?: 0L) < hoy) {
+                finanzasDao.insertarPresupuesto(finanza)
+            } else {
+                finanzasDao.insertarPresupuesto(finanza)
+            }
+        }
+    }
+
+    suspend fun realizarCierreSemanal(presupuestoActual: PresupuestoSemanal) {
+        finanzasDao.insertarPresupuesto(presupuestoActual)
+    }
+
+    suspend fun eliminarTodos() {
+        finanzasDao.eliminarTodasLasFinanzas()
+        finanzasDao.eliminarTodasLasTransacciones()
+    }
+
 }

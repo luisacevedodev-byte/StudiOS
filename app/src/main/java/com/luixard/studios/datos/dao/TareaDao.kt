@@ -19,6 +19,9 @@ interface TareaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarLista(tareas: List<Tarea>)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarListaTareas(tareas: List<Tarea>)
+
     // Editar tarea existente
     @Update
     suspend fun actualizarTarea(tarea: Tarea)
@@ -26,6 +29,12 @@ interface TareaDao {
     // Eliminar permanentemente de la base de datos
     @Delete
     suspend fun eliminarTareaPermanente(tarea: Tarea)
+
+    @Query("DELETE FROM tareas")
+    suspend fun eliminarTodas()
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun restaurarTareasMasivo(tareas: List<Tarea>)
 
     // ---------------- LECTURA DE DATOS  ----------------
 

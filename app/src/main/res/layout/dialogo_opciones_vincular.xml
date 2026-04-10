@@ -61,7 +61,7 @@
         style="@style/Widget.MaterialComponents.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="80dp"
-        android:text="Crear cuenta con Correo"
+        android:text="Continuar con Correo"
         android:textColor="?attr/colorOnSurface"
         android:textAllCaps="false"
         android:textStyle="bold"

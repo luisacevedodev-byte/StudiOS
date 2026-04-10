@@ -21,4 +21,7 @@ class NotaRepositorio(private val notaDao: NotaDao) {
     suspend fun eliminarNota(nota: Nota) {
         notaDao.eliminarNota(nota)
     }
+
+    suspend fun eliminarTodas() = notaDao.eliminarTodas()
+
 }

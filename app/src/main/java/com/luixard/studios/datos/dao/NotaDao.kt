@@ -14,13 +14,18 @@ interface NotaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarNota(nota: Nota)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun agregarNota(nota: Nota)
+
     @Update
     suspend fun actualizarNota(nota: Nota)
 
     @Delete
     suspend fun eliminarNota(nota: Nota)
 
-    // Obtenemos las notas ordenadas de la más reciente a la más antigua
+    @Query("DELETE FROM notas")
+    suspend fun eliminarTodas()
+
     @Query("SELECT * FROM notas ORDER BY id_nota DESC")
     fun obtenerTodasLasNotas(): Flow<List<Nota>>
 }

@@ -30,60 +30,79 @@ class PerfilFragment : Fragment() {
 
     private val viewModel: PerfilViewModel by viewModels {
         val app = requireActivity().application as AplicacionStudiOS
-        PerfilViewModelFactory(app.repositorioTareas, app.repositorioAuth, app.repositorioFinanzas)
+        PerfilViewModelFactory(
+            app.repositorioTareas,
+            app.repositorioAuth,
+            app.repositorioFinanzas,
+            app.repositorioNotas
+        )
     }
 
     private val PREFS_NAME = "StudiosPrefs"
     private val KEY_NOMBRE_USUARIO = "nombre_usuario"
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.fragment_perfil, container, false)
-    }
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
+    ): View? = inflater.inflate(R.layout.fragment_perfil, container, false)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         // 1. Enlaces de vistas
-        tvNombreUsuario = view.findViewById(R.id.tvNombreUsuario)
+        tvNombreUsuario  = view.findViewById(R.id.tvNombreUsuario)
         tvEmailSubtitulo = view.findViewById(R.id.tvEmailSubtitulo)
-        tvStatTareas = view.findViewById(R.id.tvStatTareas)
+        tvStatTareas     = view.findViewById(R.id.tvStatTareas)
         tvStatAsistencia = view.findViewById(R.id.tvStatAsistencia)
-        cardVincular = view.findViewById(R.id.cardVincularCuenta)
+        cardVincular     = view.findViewById(R.id.cardVincularCuenta)
         cardIniciarSesion = view.findViewById(R.id.cardIniciarSesion)
         cardCerrarSesion = view.findViewById(R.id.cardCerrarSesion)
-        layoutCargando = view.findViewById(R.id.layoutCargandoRespaldo)
+        layoutCargando   = view.findViewById(R.id.layoutCargandoRespaldo)
         val btnEditarNombre = view.findViewById<ImageButton>(R.id.btnEditarNombre)
 
-        // 2. PRIORIDAD MÁXIMA: Carga local inmediata
-        // Esto pone el nombre guardado (o "Usuario Nuevo") antes de que el ojo note el cambio
+        // 2. Carga local inmediata (antes de que llegue la nube)
         cargarNombreUsuario()
 
-        // 3. Configurar observadores (Vigilan cambios futuros)
+        // 3. Observadores
         setupObservers()
 
         // 4. Listeners
         btnEditarNombre.setOnClickListener { mostrarDialogoEditarNombre() }
-        cardVincular.setOnClickListener { mostrarDialogoMenuAuth("Vincular Cuenta") }
+        cardVincular.setOnClickListener    { mostrarDialogoMenuAuth("Vincular Cuenta") }
         cardIniciarSesion.setOnClickListener { mostrarDialogoMenuAuth("Iniciar Sesión") }
-        cardCerrarSesion.setOnClickListener { viewModel.cerrarSesion() }
+        cardCerrarSesion.setOnClickListener  { viewModel.cerrarSesion() }
 
-        // 5. Manejo de argumentos (Si vienes desde el Drawer)
+        // 5. Argumento desde el Drawer
         val abrirVincular = arguments?.getBoolean("abrirVincularDirecto") ?: false
         if (abrirVincular) {
             arguments?.putBoolean("abrirVincularDirecto", false)
             mostrarDialogoMenuAuth("Vincular Cuenta")
         }
 
-        // 6. Sincronizar con la nube
+        // 6. Verificar sesión en la nube
         viewModel.verificarSesion()
     }
 
-    // --- GESTIÓN DE NOMBRE LOCAL (SharedPreferences) ---
-    private fun mostrarDialogoEditarNombre() {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialogo_editar_nombre, null)
-        val etNombre = dialogView.findViewById<TextInputEditText>(R.id.etNuevoNombre)
+    // -------------------------------------------------------------------------
+    // NOMBRE LOCAL (SharedPreferences)
+    // -------------------------------------------------------------------------
 
-        // Ponemos el nombre actual en el cuadro de texto
+    private fun cargarNombreUsuario() {
+        val sp = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        tvNombreUsuario.text = sp.getString(KEY_NOMBRE_USUARIO, "Usuario Nuevo")
+    }
+
+    private fun guardarNombreUsuario(nombre: String) {
+        requireActivity()
+            .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            .edit()
+            .putString(KEY_NOMBRE_USUARIO, nombre)
+            .apply()
+    }
+
+    private fun mostrarDialogoEditarNombre() {
+        val dialogView = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialogo_editar_nombre, null)
+        val etNombre = dialogView.findViewById<TextInputEditText>(R.id.etNuevoNombre)
         etNombre?.setText(tvNombreUsuario.text)
 
         MaterialAlertDialogBuilder(requireContext())
@@ -91,72 +110,66 @@ class PerfilFragment : Fragment() {
             .setView(dialogView)
             .setPositiveButton("Guardar") { _, _ ->
                 val nuevoNombre = etNombre?.text.toString().trim()
-
                 if (nuevoNombre.isNotEmpty()) {
                     guardarNombreUsuario(nuevoNombre)
                     tvNombreUsuario.text = nuevoNombre
                     MensajesUI.exito(requireActivity(), "Nombre actualizado")
-
-                    // Si el usuario ya está vinculado, esto solo cambia el nombre local.
-                    // Podrías añadir aquí una llamada al ViewModel para actualizar Firestore también si gustas.
                 }
             }
             .setNegativeButton("Cancelar", null)
             .show()
     }
 
-    private fun guardarNombreUsuario(nombre: String) {
-        val sharedPref = requireActivity().getSharedPreferences("StudiosPrefs", Context.MODE_PRIVATE)
-        sharedPref.edit().putString("nombre_usuario", nombre).apply()
-    }
+    // -------------------------------------------------------------------------
+    // OBSERVADORES
+    // -------------------------------------------------------------------------
 
     private fun setupObservers() {
-        // 1. Estadísticas
+        // Estadísticas
         viewModel.porcentajeTareas.observe(viewLifecycleOwner) { tvStatTareas.text = "$it%" }
         viewModel.porcentajeAsistencia.observe(viewLifecycleOwner) { tvStatAsistencia.text = "$it%" }
 
-        // 2. Nombre (Con la lógica anti-parpadeo que platicamos)
+        // Nombre (anti-parpadeo: solo sobreescribimos si el ViewModel tiene algo)
         viewModel.nombreUsuarioDisplay.observe(viewLifecycleOwner) { nombre ->
-            // Si el ViewModel no tiene nada (es null), no borramos lo que puso el Fragment
-            if (!nombre.isNullOrEmpty()) {
-                tvNombreUsuario.text = nombre
-            }
+            if (!nombre.isNullOrEmpty()) tvNombreUsuario.text = nombre
         }
 
-        // 3. Correo / Subtítulo
+        // Correo
         viewModel.correoUsuario.observe(viewLifecycleOwner) { correo ->
-            if (!correo.isNullOrEmpty()) {
-                tvEmailSubtitulo.text = correo
-            }
+            if (!correo.isNullOrEmpty()) tvEmailSubtitulo.text = correo
         }
 
-        // 4. Estado de la Sesión (Visibilidad de tarjetas)
+        // Estado de sesión
         viewModel.usuarioLogueado.observe(viewLifecycleOwner) { logueado ->
-            cardVincular.visibility = if (logueado) View.GONE else View.VISIBLE
+            cardVincular.visibility      = if (logueado) View.GONE else View.VISIBLE
             cardIniciarSesion.visibility = if (logueado) View.GONE else View.VISIBLE
-            cardCerrarSesion.visibility = if (logueado) View.VISIBLE else View.GONE
+            cardCerrarSesion.visibility  = if (logueado) View.VISIBLE else View.GONE
 
-            // Si cierra sesión, regresamos al nombre local de inmediato
             if (!logueado) {
                 cargarNombreUsuario()
                 tvEmailSubtitulo.text = "Usuario no registrado"
             }
         }
 
-        // 5. Barra de carga de respaldo
+        // Barra de carga
         viewModel.estaCargandoRespaldo.observe(viewLifecycleOwner) { cargando ->
             layoutCargando.visibility = if (cargando) View.VISIBLE else View.GONE
         }
     }
 
-    // --- DIÁLOGOS DE AUTENTICACIÓN ---
+    // -------------------------------------------------------------------------
+    // DIÁLOGOS DE AUTENTICACIÓN
+    // -------------------------------------------------------------------------
+
     private fun mostrarDialogoMenuAuth(titulo: String) {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialogo_opciones_vincular, null)
+        val view = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialogo_opciones_vincular, null)
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setView(view)
             .setBackground(ColorDrawable(Color.TRANSPARENT))
             .create()
 
+        view.findViewById<ImageButton>(R.id.btnCerrarDialogo)?.setOnClickListener { dialog.dismiss() }
         view.findViewById<TextView>(R.id.tvTituloVincular)?.text = titulo
         view.findViewById<MaterialButton>(R.id.btnCorreo).setOnClickListener {
             dialog.dismiss()
@@ -166,23 +179,22 @@ class PerfilFragment : Fragment() {
     }
 
     private fun mostrarDialogoRegistro() {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialogo_registro_correo, null)
+        val view = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialogo_registro_correo, null)
         val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(view).setBackground(ColorDrawable(Color.TRANSPARENT)).create()
+            .setView(view)
+            .setBackground(ColorDrawable(Color.TRANSPARENT))
+            .create()
 
-        val btnCerrar = view.findViewById<ImageButton>(R.id.btnCerrarRegistro)
-        val btnRegresar = view.findViewById<ImageButton>(R.id.btnRegresarRegistro)
-
-        btnCerrar?.setOnClickListener { dialog.dismiss() }
-        btnRegresar?.setOnClickListener {
-            dialog.dismiss()
-            mostrarDialogoMenuAuth("Vincular Cuenta")
+        view.findViewById<ImageButton>(R.id.btnCerrarRegistro)?.setOnClickListener { dialog.dismiss() }
+        view.findViewById<ImageButton>(R.id.btnRegresarRegistro)?.setOnClickListener {
+            dialog.dismiss(); mostrarDialogoMenuAuth("Vincular Cuenta")
         }
 
-        val etNom = view.findViewById<TextInputEditText>(R.id.etNombreRegistro)
-        val etApe = view.findViewById<TextInputEditText>(R.id.etApellidoRegistro)
-        val etCor = view.findViewById<TextInputEditText>(R.id.etCorreo)
-        val etPas = view.findViewById<TextInputEditText>(R.id.etContrasena)
+        val etNom  = view.findViewById<TextInputEditText>(R.id.etNombreRegistro)
+        val etApe  = view.findViewById<TextInputEditText>(R.id.etApellidoRegistro)
+        val etCor  = view.findViewById<TextInputEditText>(R.id.etCorreo)
+        val etPas  = view.findViewById<TextInputEditText>(R.id.etContrasena)
         val etConf = view.findViewById<TextInputEditText>(R.id.etConfirmarContrasena)
 
         view.findViewById<MaterialButton>(R.id.btnRegistrar).setOnClickListener {
@@ -192,69 +204,73 @@ class PerfilFragment : Fragment() {
             val pas = etPas?.text.toString()
 
             if (nom.isNotEmpty() && pas == etConf?.text.toString() && pas.length >= 6) {
-                viewModel.enviarCodigoAlCorreo(nom, cor)
+                viewModel.generarCodigoVerificacion()
+                viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
                 dialog.dismiss()
                 mostrarDialogoVerificacion(cor, pas, nom, ape, "registro")
             } else {
-                MensajesUI.error(requireActivity(), "Datos inválidos o contraseña corta")
+                MensajesUI.error(requireActivity(), "Datos inválidos o contraseña muy corta")
             }
         }
         dialog.show()
     }
 
-    private fun mostrarDialogoVerificacion(cor: String, pas: String, nom: String, ape: String, tipo: String) {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialogo_verificacion_codigo, null)
+    private fun mostrarDialogoVerificacion(
+        cor: String, pas: String, nom: String, ape: String, tipo: String
+    ) {
+        val view = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialogo_verificacion_codigo, null)
         val dialog = MaterialAlertDialogBuilder(requireContext())
             .setView(view)
             .setBackground(ColorDrawable(Color.TRANSPARENT))
             .create()
 
-        // Mostramos el correo al que se envió el código
+        view.findViewById<ImageButton>(R.id.btnCerrarVerif)?.setOnClickListener { dialog.dismiss() }
+        view.findViewById<ImageButton>(R.id.btnRegresarVerif)?.setOnClickListener {
+            dialog.dismiss(); mostrarDialogoRegistro()
+        }
         view.findViewById<TextView>(R.id.tvCorreoDestino)?.text = cor
 
         view.findViewById<MaterialButton>(R.id.btnVerificarCodigo).setOnClickListener {
-            val codigoIngresado = view.findViewById<TextInputEditText>(R.id.etCodigoVerificacion)?.text.toString().trim()
+            val codigo = view.findViewById<TextInputEditText>(R.id.etCodigoVerificacion)
+                .text.toString().trim()
 
-            // 1. Verificamos contra el código que tiene el ViewModel (generado por EmailJSManager)
-            if (codigoIngresado == viewModel.codigoVerificacion) {
-                dialog.dismiss()
-
+            if (codigo == viewModel.codigoGenerado) {
                 if (tipo == "registro") {
-                    // 2. Procedemos a crear la cuenta en Firebase
-                    FirebaseAuth.getInstance().createUserWithEmailAndPassword(cor, pas).addOnSuccessListener {
-
-                        guardarNombreUsuario("$nom $ape")
-
-                        // 3. Subimos los datos iniciales a Firestore (Módulo Académico y Financiero)
-                        viewModel.iniciarRespaldoTotal(nom, ape)
-
-                        MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con éxito, $nom!")
-
-                    }.addOnFailureListener { e ->
-                        MensajesUI.error(requireActivity(), "Error al registrar: ${e.message}")
-                    }
+                    FirebaseAuth.getInstance()
+                        .createUserWithEmailAndPassword(cor, pas)
+                        .addOnSuccessListener {
+                            guardarNombreUsuario("$nom $ape")
+                            viewModel.actualizarNombreInmediato(nom, ape)
+                            viewModel.iniciarRespaldoTotal(nom, ape)
+                            dialog.dismiss()
+                            MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con éxito!")
+                        }
+                        .addOnFailureListener {
+                            MensajesUI.error(requireActivity(), "Error al crear cuenta: ${it.message}")
+                        }
                 } else {
-                    // Aquí podrías manejar la lógica para recuperación de contraseña si el tipo fuera "recuperar"
-                    MensajesUI.exito(requireActivity(), "Código verificado correctamente")
+                    dialog.dismiss()
+                    MensajesUI.exito(requireActivity(), "Código verificado")
                 }
             } else {
-                // 4. El código no coincide
-                MensajesUI.error(requireActivity(), "El código ingresado es incorrecto")
+                MensajesUI.error(requireActivity(), "El código no coincide")
             }
         }
-
         dialog.show()
     }
 
     private fun mostrarDialogoLogin() {
-        val view = LayoutInflater.from(requireContext()).inflate(R.layout.dialogo_login_correo, null)
+        val view = LayoutInflater.from(requireContext())
+            .inflate(R.layout.dialogo_login_correo, null)
         val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(view).setBackground(ColorDrawable(Color.TRANSPARENT)).create()
+            .setView(view)
+            .setBackground(ColorDrawable(Color.TRANSPARENT))
+            .create()
 
-        view.findViewById<ImageButton>(R.id.btnCerrarLogin).setOnClickListener { dialog.dismiss() }
-        view.findViewById<ImageButton>(R.id.btnRegresarLogin).setOnClickListener {
-            dialog.dismiss()
-            mostrarDialogoMenuAuth("Iniciar Sesión")
+        view.findViewById<ImageButton>(R.id.btnCerrarLogin)?.setOnClickListener { dialog.dismiss() }
+        view.findViewById<ImageButton>(R.id.btnRegresarLogin)?.setOnClickListener {
+            dialog.dismiss(); mostrarDialogoMenuAuth("Iniciar Sesión")
         }
 
         view.findViewById<MaterialButton>(R.id.btnEntrar).setOnClickListener {
@@ -262,36 +278,40 @@ class PerfilFragment : Fragment() {
             val pas = view.findViewById<TextInputEditText>(R.id.etContrasenaLogin).text.toString()
 
             if (cor.isNotEmpty() && pas.isNotEmpty()) {
-                FirebaseAuth.getInstance().signInWithEmailAndPassword(cor, pas).addOnSuccessListener { result ->
-                    val uid = result.user?.uid ?: ""
-
-                    // --- CAPTURA DE NOMBRE POST-LOGIN ---
-                    com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        .collection("usuarios").document(uid).get()
-                        .addOnSuccessListener { doc ->
-                            if (doc.exists()) {
-                                val nom = doc.getString("perfil.nombre") ?: ""
-                                val ape = doc.getString("perfil.apellido") ?: ""
-                                if (nom.isNotEmpty()) {
-                                    guardarNombreUsuario("$nom $ape")
+                FirebaseAuth.getInstance().signInWithEmailAndPassword(cor, pas)
+                    .addOnSuccessListener { result ->
+                        val uid = result.user?.uid ?: ""
+                        // Captura del nombre desde Firestore post-login
+                        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                            .collection("usuarios").document(uid).get()
+                            .addOnSuccessListener { doc ->
+                                if (doc.exists()) {
+                                    val nom = doc.getString("perfil.nombre") ?: ""
+                                    val ape = doc.getString("perfil.apellido") ?: ""
+                                    if (nom.isNotEmpty()) {
+                                        guardarNombreUsuario("$nom $ape")
+                                        viewModel.actualizarNombreInmediato(nom, ape)
+                                    }
                                 }
+                                dialog.dismiss()
+                                viewModel.verificarSesion()
+                                MensajesUI.exito(requireActivity(), "¡Bienvenido de nuevo!")
                             }
-                            dialog.dismiss()
-                            viewModel.verificarSesion()
-                            MensajesUI.exito(requireActivity(), "¡Bienvenido de nuevo!")
+                    }
+                    .addOnFailureListener { e ->
+                        val exception = e as? com.google.firebase.auth.FirebaseAuthException
+                        val errorMsg = when (exception?.errorCode) {
+                            "ERROR_USER_NOT_FOUND",
+                            "ERROR_INVALID_CREDENTIAL" ->
+                                "No existe una cuenta con este correo. Por favor, regístrate primero."
+                            "ERROR_WRONG_PASSWORD" ->
+                                "Credenciales incorrectas. Inténtalo de nuevo."
+                            else -> "Correo o contraseña incorrectos"
                         }
-                }.addOnFailureListener {
-                    MensajesUI.error(requireActivity(), "Correo o contraseña incorrectos")
-                }
+                        MensajesUI.error(requireActivity(), errorMsg)
+                    }
             }
         }
         dialog.show()
-    }
-
-    // --- FUNCIONES DE IDENTIDAD LOCAL ---
-
-    private fun cargarNombreUsuario() {
-        val sharedPref = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        tvNombreUsuario.text = sharedPref.getString(KEY_NOMBRE_USUARIO, "Usuario Nuevo")
     }
 }
