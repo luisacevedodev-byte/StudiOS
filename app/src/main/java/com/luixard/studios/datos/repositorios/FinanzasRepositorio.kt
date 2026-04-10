@@ -8,73 +8,68 @@ import kotlinx.coroutines.flow.Flow
 
 class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
 
-    val presupuestoActual = finanzasDao.obtenerPresupuestoActual()
-    val categorias = finanzasDao.obtenerTodasLasCategorias()
-    val todosLosRegistros = finanzasDao.obtenerTodasLasFinanzas()
+    val presupuestoActual  = finanzasDao.obtenerPresupuestoActual()
+    val categorias         = finanzasDao.obtenerTodasLasCategorias()
+    val todosLosRegistros  = finanzasDao.obtenerTodasLasFinanzas()
+    val todasLasTransaccionesFlow: Flow<List<Transaccion>> = finanzasDao.obtenerTodasLasTransaccionesFlow()
 
-    suspend fun insertarPresupuesto(presupuesto: PresupuestoSemanal) {
+
+    suspend fun insertarPresupuesto(presupuesto: PresupuestoSemanal) =
         finanzasDao.insertarPresupuesto(presupuesto)
-    }
 
-    suspend fun eliminarPresupuesto(presupuesto: PresupuestoSemanal) {
+    suspend fun eliminarPresupuesto(presupuesto: PresupuestoSemanal) =
         finanzasDao.eliminarPresupuesto(presupuesto)
-    }
 
-    suspend fun insertarTransaccion(transaccion: Transaccion) {
+    suspend fun insertarTransaccion(transaccion: Transaccion) =
         finanzasDao.insertarTransaccion(transaccion)
-    }
 
-    suspend fun eliminarTransaccion(transaccion: Transaccion) {
+    suspend fun eliminarTransaccion(transaccion: Transaccion) =
         finanzasDao.eliminarTransaccion(transaccion)
-    }
 
-    fun obtenerTransacciones(idFinanza: Int): Flow<List<Transaccion>> {
-        return finanzasDao.obtenerTransaccionesPorFinanza(idFinanza)
-    }
+    fun obtenerTransacciones(idFinanza: Int): Flow<List<Transaccion>> =
+        finanzasDao.obtenerTransaccionesPorFinanza(idFinanza)
 
-    suspend fun insertarCategoria(categoria: CategoriaGasto) {
+    suspend fun insertarCategoria(categoria: CategoriaGasto) =
         finanzasDao.insertarCategoria(categoria)
-    }
 
-    suspend fun eliminarCategoria(categoria: CategoriaGasto) {
+    suspend fun eliminarCategoria(categoria: CategoriaGasto) =
         finanzasDao.eliminarCategoria(categoria)
-    }
 
-    fun obtenerHistorialSemanas(): Flow<List<PresupuestoSemanal>> {
-        return finanzasDao.obtenerTodasLasFinanzas()
-    }
+    fun obtenerHistorialSemanas(): Flow<List<PresupuestoSemanal>> =
+        finanzasDao.obtenerTodasLasFinanzas()
 
     fun calcularSaldoRestante(presupuestoMeta: Double, transacciones: List<Transaccion>): Double {
         var saldo = presupuestoMeta
         for (t in transacciones) {
-            if (t.tipo_transaccion == "Gasto") {
-                saldo -= t.monto
-            } else if (t.tipo_transaccion == "Ingreso") {
-                saldo += t.monto
-            }
+            if (t.tipo_transaccion == "Gasto") saldo -= t.monto
+            else if (t.tipo_transaccion == "Ingreso") saldo += t.monto
         }
         return saldo
     }
 
-    suspend fun restaurarDatosFinanzas(listaFinanzas: List<PresupuestoSemanal>) {
-        val hoy = System.currentTimeMillis()
-
-        listaFinanzas.forEach { finanza ->
-            if ((finanza.fecha_fin?.time ?: 0L) < hoy) {
-                finanzasDao.insertarPresupuesto(finanza)
-            } else {
-                finanzasDao.insertarPresupuesto(finanza)
-            }
-        }
-    }
-
-    suspend fun realizarCierreSemanal(presupuestoActual: PresupuestoSemanal) {
+    suspend fun realizarCierreSemanal(presupuestoActual: PresupuestoSemanal) =
         finanzasDao.insertarPresupuesto(presupuestoActual)
-    }
 
+    // ── Respaldo y restauración ───────────────────────────────────────────────
+
+    /** Limpia finanzas Y transacciones antes de restaurar desde la nube. */
     suspend fun eliminarTodos() {
         finanzasDao.eliminarTodasLasFinanzas()
         finanzasDao.eliminarTodasLasTransacciones()
     }
 
+    /**
+     * Restaura presupuestos desde la nube.
+     */
+    suspend fun restaurarDatosFinanzas(listaFinanzas: List<PresupuestoSemanal>) {
+        listaFinanzas.forEach { finanzasDao.insertarPresupuesto(it) }
+    }
+
+    /** Restaura todas las transacciones vinculadas a sus presupuestos. */
+    suspend fun restaurarTransacciones(lista: List<Transaccion>) =
+        finanzasDao.insertarTransacciones(lista)
+
+    /** Devuelve todas las transacciones para incluirlas en el respaldo. */
+    suspend fun obtenerTodasLasTransacciones(): List<Transaccion> =
+        finanzasDao.obtenerTodasLasTransaccionesSuspend()
 }

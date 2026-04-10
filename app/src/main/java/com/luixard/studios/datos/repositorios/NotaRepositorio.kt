@@ -6,22 +6,17 @@ import kotlinx.coroutines.flow.Flow
 
 class NotaRepositorio(private val notaDao: NotaDao) {
 
-    // LECTURA
     val todasLasNotas: Flow<List<Nota>> = notaDao.obtenerTodasLasNotas()
 
-    // ACCIONES CRUD
-    suspend fun agregarNota(nota: Nota) {
-        notaDao.insertarNota(nota)
-    }
+    suspend fun agregarNota(nota: Nota) = notaDao.insertarNota(nota)
 
-    suspend fun actualizarNota(nota: Nota) {
-        notaDao.actualizarNota(nota)
-    }
+    // Usado en restauración — inserta con ID real (REPLACE), no duplica
+    suspend fun insertarNota(nota: Nota) = notaDao.insertarNota(nota)
 
-    suspend fun eliminarNota(nota: Nota) {
-        notaDao.eliminarNota(nota)
-    }
+    suspend fun actualizarNota(nota: Nota) = notaDao.actualizarNota(nota)
 
+    suspend fun eliminarNota(nota: Nota) = notaDao.eliminarNota(nota)
+
+    // Limpia toda la tabla antes de restaurar desde la nube
     suspend fun eliminarTodas() = notaDao.eliminarTodas()
-
 }

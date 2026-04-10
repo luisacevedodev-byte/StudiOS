@@ -21,4 +21,20 @@
 
     </com.google.android.material.textfield.TextInputLayout>
 
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/tilNuevoApellido"
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Tu Apellido (s)">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/etNuevoApellido"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="textPersonName"
+            android:maxLength="30" />
+
+    </com.google.android.material.textfield.TextInputLayout>
+
 </LinearLayout>
