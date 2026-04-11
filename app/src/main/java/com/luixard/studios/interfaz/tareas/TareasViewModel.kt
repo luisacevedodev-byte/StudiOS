@@ -57,4 +57,13 @@ class TareasViewModel(aplicacion: Application) : AndroidViewModel(aplicacion) {
             repositorio.eliminarPermanente(tarea)
         }
     }
+
+    fun actualizarTextosDeTarea(tarea: Tarea) {
+        viewModelScope.launch {
+            val tareaActualizada = tarea.copy(
+                updatedAt = System.currentTimeMillis()
+            )
+            repositorio.actualizarTarea(tareaActualizada)
+        }
+    }
 }

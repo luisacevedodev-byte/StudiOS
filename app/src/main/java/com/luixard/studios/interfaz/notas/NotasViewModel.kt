@@ -43,7 +43,10 @@ class NotasViewModel(aplicacion: Application) : AndroidViewModel(aplicacion) {
 
     fun actualizarNota(nota: Nota) {
         viewModelScope.launch {
-            repositorio.actualizarNota(nota)
+            val notaActualizada = nota.copy(
+                updatedAt = System.currentTimeMillis()
+            )
+            repositorio.actualizarNota(notaActualizada)
         }
     }
 
@@ -58,4 +61,8 @@ class NotasViewModel(aplicacion: Application) : AndroidViewModel(aplicacion) {
         val sdf = java.text.SimpleDateFormat("dd MMM - hh:mm a", java.util.Locale.getDefault())
         return sdf.format(java.util.Date())
     }
+
+
+
+
 }

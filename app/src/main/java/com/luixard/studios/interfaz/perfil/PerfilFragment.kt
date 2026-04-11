@@ -4,6 +4,8 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.*
 import android.widget.*
 import androidx.fragment.app.Fragment
@@ -207,25 +209,11 @@ class PerfilFragment : Fragment() {
             val conf = etConf?.text.toString()
 
             when {
-                nom.isEmpty() -> {
-                    MensajesUI.error(requireActivity(), "El nombre no puede estar vacío")
-                    return@setOnClickListener
-                }
-                cor.isEmpty() -> {
-                    MensajesUI.error(requireActivity(), "Ingresa un correo válido")
-                    return@setOnClickListener
-                }
-                pas.length < 6 -> {
-                    MensajesUI.error(requireActivity(), "La contraseña debe tener al menos 6 caracteres")
-                    return@setOnClickListener
-                }
-                pas != conf -> {
-                    MensajesUI.error(requireActivity(), "Las contraseñas no coinciden")
-                    return@setOnClickListener
-                }
+                nom.isEmpty()   -> MensajesUI.error(requireActivity(), "El nombre no puede estar vacío")
+                cor.isEmpty()   -> MensajesUI.error(requireActivity(), "Ingresa un correo válido")
+                pas.length < 6  -> MensajesUI.error(requireActivity(), "La contraseña debe tener al menos 6 caracteres")
+                pas != conf     -> MensajesUI.error(requireActivity(), "Las contraseñas no coinciden")
                 else -> {
-                    // Enviar código directo — si el correo ya existe,
-                    // createUserWithEmailAndPassword lo detectará con ERROR_EMAIL_ALREADY_IN_USE
                     viewModel.generarCodigoVerificacion()
                     viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
                     dialog.dismiss()
@@ -236,7 +224,7 @@ class PerfilFragment : Fragment() {
         dialog.show()
     }
 
-    // ── VERIFICACIÓN — REGISTRO ───────────────────────────────────────────────
+    // ── VERIFICACIÓN REGISTRO ─────────────────────────────────────────────────
 
     private fun mostrarDialogoVerificacionRegistro(
         cor: String, pas: String, nom: String, ape: String
@@ -253,8 +241,7 @@ class PerfilFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvCorreoDestino)?.text = cor
 
         view.findViewById<MaterialButton>(R.id.btnVerificarCodigo).setOnClickListener {
-            val codigo = view
-                .findViewById<TextInputEditText>(R.id.etCodigoVerificacion)
+            val codigo = view.findViewById<TextInputEditText>(R.id.etCodigoVerificacion)
                 .text.toString().trim()
 
             if (codigo != viewModel.codigoGenerado) {
@@ -297,7 +284,6 @@ class PerfilFragment : Fragment() {
         view.findViewById<ImageButton>(R.id.btnRegresarLogin)?.setOnClickListener {
             dialog.dismiss(); mostrarDialogoMenuAuth("Iniciar Sesión")
         }
-
         view.findViewById<TextView>(R.id.tvOlvidasteContrasena)?.setOnClickListener {
             dialog.dismiss()
             mostrarDialogoRecuperarPassword()
@@ -307,14 +293,8 @@ class PerfilFragment : Fragment() {
             val cor = view.findViewById<TextInputEditText>(R.id.etCorreoLogin).text.toString().trim()
             val pas = view.findViewById<TextInputEditText>(R.id.etContrasenaLogin).text.toString()
 
-            if (cor.isEmpty()) {
-                MensajesUI.error(requireActivity(), "Ingresa tu correo")
-                return@setOnClickListener
-            }
-            if (pas.isEmpty()) {
-                MensajesUI.error(requireActivity(), "Ingresa tu contraseña")
-                return@setOnClickListener
-            }
+            if (cor.isEmpty()) { MensajesUI.error(requireActivity(), "Ingresa tu correo"); return@setOnClickListener }
+            if (pas.isEmpty()) { MensajesUI.error(requireActivity(), "Ingresa tu contraseña"); return@setOnClickListener }
 
             FirebaseAuth.getInstance().signInWithEmailAndPassword(cor, pas)
                 .addOnSuccessListener { result ->
@@ -335,17 +315,14 @@ class PerfilFragment : Fragment() {
                         }
                 }
                 .addOnFailureListener { e ->
-                    // ── FIX: Firebase con Email Enumeration Protection activa devuelve
-                    // ERROR_INVALID_CREDENTIAL tanto para contraseña incorrecta como para
-                    // usuario inexistente. Se muestra un mensaje genérico en ese caso. ──
                     val ex  = e as? FirebaseAuthException
                     val msg = when (ex?.errorCode) {
-                        "ERROR_USER_NOT_FOUND"             -> "No existe una cuenta con este correo."
-                        "ERROR_WRONG_PASSWORD"             -> "Contraseña incorrecta. Inténtalo de nuevo."
+                        "ERROR_USER_NOT_FOUND"            -> "No existe una cuenta con este correo."
+                        "ERROR_WRONG_PASSWORD"            -> "Contraseña incorrecta. Inténtalo de nuevo."
                         "ERROR_INVALID_CREDENTIAL",
-                        "ERROR_INVALID_LOGIN_CREDENTIALS"  -> "Correo o contraseña incorrectos."
-                        "ERROR_TOO_MANY_REQUESTS"          -> "Demasiados intentos. Espera un momento."
-                        else                               -> "Correo o contraseña incorrectos."
+                        "ERROR_INVALID_LOGIN_CREDENTIALS" -> "Correo o contraseña incorrectos."
+                        "ERROR_TOO_MANY_REQUESTS"         -> "Demasiados intentos. Espera un momento."
+                        else                              -> "Correo o contraseña incorrectos."
                     }
                     MensajesUI.error(requireActivity(), msg)
                 }
@@ -353,7 +330,7 @@ class PerfilFragment : Fragment() {
         dialog.show()
     }
 
-    // ── RECUPERAR CONTRASEÑA — PASO 1: ingresar correo ────────────────────────
+    // ── RECUPERAR CONTRASEÑA — PASO 1: correo ────────────────────────────────
 
     private fun mostrarDialogoRecuperarPassword() {
         val view = LayoutInflater.from(requireContext())
@@ -370,10 +347,6 @@ class PerfilFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // ── FIX: fetchSignInMethodsForEmail siempre devuelve lista vacía cuando
-            // Firebase tiene Email Enumeration Protection activa, aunque la cuenta exista.
-            // Solución: enviar el código directamente. Si la cuenta no existe, el usuario
-            // lo descubrirá al intentar cambiar la contraseña (sendPasswordResetEmail). ──
             viewModel.generarCodigoVerificacion()
             viewModel.enviarEmail(viewModel.prepararDatosEmail("Usuario", cor))
             dialog.dismiss()
@@ -397,66 +370,46 @@ class PerfilFragment : Fragment() {
         view.findViewById<TextView>(R.id.tvCorreoDestino)?.text = cor
 
         view.findViewById<MaterialButton>(R.id.btnVerificarCodigo).setOnClickListener {
-            val codigo = view
-                .findViewById<TextInputEditText>(R.id.etCodigoVerificacion)
+            val codigo = view.findViewById<TextInputEditText>(R.id.etCodigoVerificacion)
                 .text.toString().trim()
 
             if (codigo != viewModel.codigoGenerado) {
                 MensajesUI.error(requireActivity(), "El código no coincide")
                 return@setOnClickListener
             }
-            dialog.dismiss()
-            mostrarDialogoNuevaPassword(cor)
+
+            // Código verificado → enviar enlace de restablecimiento de Firebase
+            // No se necesita dialogo_nueva_password: Firebase gestiona el cambio
+            // de contraseña de forma segura desde el enlace del correo.
+            FirebaseAuth.getInstance().sendPasswordResetEmail(cor)
+                .addOnSuccessListener {
+                    dialog.dismiss()
+                    // Mostrar mensaje durante 8 segundos mencionando SPAM
+                    mostrarMensajeResetContrasena(cor)
+                }
+                .addOnFailureListener {
+                    MensajesUI.error(requireActivity(), "Error al enviar el correo. Intenta de nuevo.")
+                }
         }
         dialog.show()
     }
 
-    // ── RECUPERAR CONTRASEÑA — PASO 3: nueva contraseña ──────────────────────
+    private fun mostrarMensajeResetContrasena(cor: String) {
+        if (!isAdded) return
 
-    private fun mostrarDialogoNuevaPassword(cor: String) {
-        val dialogView = LayoutInflater.from(requireContext()).inflate(
-            R.layout.dialogo_nueva_password, null
-        )
-        val dialog = MaterialAlertDialogBuilder(requireContext())
-            .setView(dialogView).setBackground(ColorDrawable(Color.TRANSPARENT)).create()
+        val alertDialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Correo enviado")
+            .setMessage(
+                "Te enviamos un enlace a\n$cor\npara restablecer tu contraseña.\n\n" +
+                        "Si no lo encuentras en tu bandeja principal, revisa la carpeta de SPAM o Correo no deseado."
+            )
+            .setCancelable(false)
+            .setPositiveButton("Entendido") { d, _ -> d.dismiss() }
+            .show()
 
-        dialogView.findViewById<ImageButton>(R.id.btnCerrarNuevaPwd)?.setOnClickListener {
-            dialog.dismiss()
-        }
-
-        val etNuevaPwd    = dialogView.findViewById<TextInputEditText>(R.id.etNuevaPassword)
-        val etConfirmaPwd = dialogView.findViewById<TextInputEditText>(R.id.etConfirmarNuevaPassword)
-
-        dialogView.findViewById<MaterialButton>(R.id.btnGuardarNuevaPwd).setOnClickListener {
-            val nueva    = etNuevaPwd?.text.toString()
-            val confirma = etConfirmaPwd?.text.toString()
-
-            when {
-                nueva.length < 6 -> {
-                    MensajesUI.error(requireActivity(), "La contraseña debe tener al menos 6 caracteres")
-                    return@setOnClickListener
-                }
-                nueva != confirma -> {
-                    MensajesUI.error(requireActivity(), "Las contraseñas no coinciden")
-                    return@setOnClickListener
-                }
-                else -> {
-                    // sendPasswordResetEmail envía el enlace aunque la cuenta no exista
-                    // (Firebase no revela si existe o no por seguridad)
-                    FirebaseAuth.getInstance().sendPasswordResetEmail(cor)
-                        .addOnSuccessListener {
-                            dialog.dismiss()
-                            MensajesUI.exito(
-                                requireActivity(),
-                                "Te enviamos un enlace a $cor para confirmar tu nueva contraseña."
-                            )
-                        }
-                        .addOnFailureListener {
-                            MensajesUI.error(requireActivity(), "Error al enviar. Intenta de nuevo.")
-                        }
-                }
-            }
-        }
-        dialog.show()
+        // Cerrar automáticamente después de 8 segundos
+        Handler(Looper.getMainLooper()).postDelayed({
+            if (alertDialog.isShowing && isAdded) alertDialog.dismiss()
+        }, 8_000)
     }
 }
