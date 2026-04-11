@@ -1,5 +1,6 @@
 package com.luixard.studios.datos.sync
 
+import android.content.Context
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -17,16 +18,17 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.UUID
+
 @OptIn(FlowPreview::class)
 object SyncManager {
 
@@ -38,9 +40,15 @@ object SyncManager {
     private var repositorioFinanzas: FinanzasRepositorio? = null
     private var inicializado = false
 
-    @Volatile private var estaHaciendoMerge = false
+    private var deviceId = ""
 
-    @Volatile private var ignorarPrimerSnapshot = false
+    var alCerrarSesionPorOtroDispositivo: (() -> Unit)? = null
+
+    @Volatile private var estaHaciendoMerge  = false
+
+    @Volatile private var snapshotsAIgnorar  = 0
+
+    @Volatile private var loginEnProgreso    = false
 
     private var snapshotListener: ListenerRegistration? = null
     private var autoBackupJob:    Job? = null
@@ -48,19 +56,28 @@ object SyncManager {
     val estaCargando  = MutableStateFlow(false)
     val nombreDisplay = MutableStateFlow("")
 
+    val loginCompletado = MutableStateFlow(false)
+
     private var nombreCached   = ""
     private var apellidoCached = ""
 
     // ─────────────────────────────────────────────────────────────────────────
-    // INIT — llamar en AplicacionStudiOS.onCreate()
+    // INIT
     // ─────────────────────────────────────────────────────────────────────────
 
     fun init(
+        context:      Context,
         repoTareas:   TareaRepositorio,
         repoNotas:    NotaRepositorio,
         repoFinanzas: FinanzasRepositorio
     ) {
         if (inicializado) return
+
+        val prefs = context.getSharedPreferences("sync_prefs", Context.MODE_PRIVATE)
+        deviceId = prefs.getString("device_id", null) ?: UUID.randomUUID().toString().also {
+            prefs.edit().putString("device_id", it).apply()
+        }
+
         repositorioTareas   = repoTareas
         repositorioNotas    = repoNotas
         repositorioFinanzas = repoFinanzas
@@ -78,51 +95,111 @@ object SyncManager {
             && repositorioFinanzas != null
 
     fun actualizarNombre(nombre: String, apellido: String) {
-        nombreCached         = nombre
-        apellidoCached       = apellido
-        nombreDisplay.value  = "$nombre $apellido".trim()
+        nombreCached        = nombre
+        apellidoCached      = apellido
+        nombreDisplay.value = "$nombre $apellido".trim()
     }
 
     // ─────────────────────────────────────────────────────────────────────────
     // EVENTOS DE AUTENTICACIÓN
     // ─────────────────────────────────────────────────────────────────────────
 
-    /** Cuenta nueva creada → subir datos locales primero. */
     fun onNuevaCuentaVinculada(nombre: String, apellido: String) {
         if (!listo()) return
         actualizarNombre(nombre, apellido)
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
 
-        estaCargando.value    = true
-        ignorarPrimerSnapshot = true
+        loginEnProgreso    = true
+        estaCargando.value = true
+        snapshotsAIgnorar  = 1
 
         scope.launch {
             try {
-                subirAsync(uid, tomarSnapshotLocal())
-            } catch (_: Exception) {
+                FirebaseFirestore.getInstance()
+                    .collection("usuarios").document(uid)
+                    .set(buildDoc(tomarSnapshotLocal()))
+                    .await()
+
+            } catch (e: Exception) {
+                e.printStackTrace()
             } finally {
                 withContext(Dispatchers.Main) { estaCargando.value = false }
             }
+
+            loginEnProgreso = false
+            activarEscuchaEnTiempoReal(uid)
+            activarAutoBackup()
+            withContext(Dispatchers.Main) { loginCompletado.value = true }
         }
-        activarEscuchaEnTiempoReal(uid)
-        activarAutoBackup()
     }
 
-    /**
-     * Login exitoso → el snapshot listener se encarga de mergear.
-     * NO subir datos locales aquí para no pisar la nube antes de saber
-     * qué hay en ella.
-     */
     fun onInicioSesion(uid: String, nombre: String = "", apellido: String = "") {
         if (!listo()) return
         if (nombre.isNotEmpty()) actualizarNombre(nombre, apellido)
-        activarEscuchaEnTiempoReal(uid)
-        activarAutoBackup()
+
+        loginEnProgreso    = true
+        estaCargando.value = true
+
+        scope.launch {
+            try {
+                val doc = FirebaseFirestore.getInstance()
+                    .collection("usuarios").document(uid)
+                    .get().await()
+
+                val data   = doc.data
+                val backup = (data?.get("datos") as? Map<*, *>)
+
+                val nom = data?.let { it["perfil"] as? Map<*, *> }?.get("nombre") as? String ?: ""
+                val ape = data?.let { it["perfil"] as? Map<*, *> }?.get("apellido") as? String ?: ""
+                if (nom.isNotEmpty()) withContext(Dispatchers.Main) { actualizarNombre(nom, ape) }
+
+                if (backup != null) {
+                    val hoy   = fmt.format(Date())
+                    val ahora = System.currentTimeMillis()
+
+                    val remotasTareas = parseTareas(
+                        backup["tareas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora)
+                    aplicarMergeTareas(repositorioTareas!!.obtenerTodas(), remotasTareas)
+
+                    val remotasNotas = parseNotas(
+                        backup["notas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora)
+                    aplicarMergeNotas(repositorioNotas!!.obtenerTodas(), remotasNotas)
+
+                    val remotasFinanzas = parseFinanzas(
+                        backup["finanzas"] as? List<Map<String, Any>> ?: emptyList(), ahora)
+                    aplicarMergeFinanzas(repositorioFinanzas!!.obtenerTodasLasFinanzasSuspend(), remotasFinanzas)
+
+                    val remotasTx = parseTransacciones(
+                        backup["transacciones"] as? List<Map<String, Any>> ?: emptyList(), ahora)
+                    aplicarMergeTransacciones(repositorioFinanzas!!.obtenerTodasLasTransacciones(), remotasTx)
+                }
+
+                snapshotsAIgnorar = 2
+
+                FirebaseFirestore.getInstance()
+                    .collection("usuarios").document(uid)
+                    .set(buildDoc(tomarSnapshotLocal()))
+                    .await()
+
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                withContext(Dispatchers.Main) { estaCargando.value = false }
+            }
+
+            loginEnProgreso = false
+            activarEscuchaEnTiempoReal(uid)
+            activarAutoBackup()
+
+            withContext(Dispatchers.Main) { loginCompletado.value = true }
+        }
     }
 
-    /** App reiniciada con sesión activa → reactivar listeners. */
     fun onSesionActiva(uid: String) {
         if (!listo()) return
+        // Si onInicioSesion está corriendo, NO activar el listener aquí.
+        // Lo activará onInicioSesion al final, con el deviceId correcto ya subido.
+        if (loginEnProgreso) return
         activarEscuchaEnTiempoReal(uid)
         activarAutoBackup()
     }
@@ -133,12 +210,14 @@ object SyncManager {
         autoBackupJob?.cancel()
         autoBackupJob         = null
         estaHaciendoMerge     = false
-        ignorarPrimerSnapshot = false
+        snapshotsAIgnorar     = 0
+        loginEnProgreso       = false
+        loginCompletado.value = false
         nombreDisplay.value   = ""
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // LISTENER EN TIEMPO REAL
+    // LISTENER EN TIEMPO REAL — cambios desde otro dispositivo
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun activarEscuchaEnTiempoReal(uid: String) {
@@ -149,18 +228,29 @@ object SyncManager {
             .addSnapshotListener { snapshot, error ->
                 if (error != null || snapshot == null || !snapshot.exists()) return@addSnapshotListener
 
-                // Ignorar ecos de nuestras propias escrituras
+                // Ignorar ecos de nuestros propios writes en curso (caché local Firestore)
                 if (snapshot.metadata.hasPendingWrites()) return@addSnapshotListener
 
-                // Capa extra de seguridad al vincular cuenta nueva
-                if (ignorarPrimerSnapshot) {
-                    ignorarPrimerSnapshot = false
+                // Consumir el contador de snapshots a ignorar
+                if (snapshotsAIgnorar > 0) {
+                    snapshotsAIgnorar--
+                    return@addSnapshotListener
+                }
+
+                // ── SESIÓN ÚNICA ──────────────────────────────────────────────
+                val activeDeviceId = snapshot.getString("perfil.active_device_id")
+                if (activeDeviceId != null
+                    && activeDeviceId.isNotEmpty()
+                    && activeDeviceId != deviceId
+                ) {
+                    FirebaseAuth.getInstance().signOut()
+                    onCerrarSesion()
+                    alCerrarSesionPorOtroDispositivo?.invoke()
                     return@addSnapshotListener
                 }
 
                 if (estaHaciendoMerge) return@addSnapshotListener
 
-                // Nombre: Firestore es fuente de verdad para el nombre
                 val nom = snapshot.getString("perfil.nombre") ?: ""
                 val ape = snapshot.getString("perfil.apellido") ?: ""
                 if (nom.isNotEmpty()) actualizarNombre(nom, ape)
@@ -171,9 +261,7 @@ object SyncManager {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // AUTO-BACKUP — 4 flows; debounce 800 ms
-    // El debounce más largo (800ms) da margen para que el merge termine
-    // antes de que el autobackup suba el estado fusionado.
+    // AUTO-BACKUP continuo — dispara cuando Room cambia
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun activarAutoBackup() {
@@ -199,7 +287,7 @@ object SyncManager {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // MERGE — last-write-wins por syncId + updatedAt
+    // MERGE CONTINUO — llamado por el snapshot listener
     // ─────────────────────────────────────────────────────────────────────────
 
     private suspend fun hacerMerge(data: Map<String, Any>) {
@@ -212,80 +300,126 @@ object SyncManager {
         withContext(Dispatchers.Main) { estaCargando.value = true }
 
         try {
-            // ── TAREAS ──────────────────────────────────────────────────────
-            val remotasTareas  = parseTareas(backup["tareas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora)
-            val localesTareas  = repositorioTareas!!.obtenerTodas()
-            val fusionadaTareas = merge(localesTareas, remotasTareas, { it.syncId }, { it.updatedAt })
-            // insertarListaTareas usa REPLACE → actualiza si el id_tarea coincide, inserta si es nuevo
-            repositorioTareas!!.restaurarTareasMasivo(fusionadaTareas)
+            val remotasTareas = parseTareas(
+                backup["tareas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora)
+            aplicarMergeTareas(repositorioTareas!!.obtenerTodas(), remotasTareas)
 
-            // ── NOTAS ───────────────────────────────────────────────────────
-            val remotasNotas   = parseNotas(backup["notas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora)
-            val localesNotas   = repositorioNotas!!.obtenerTodas()
-            val fusionadaNotas = merge(localesNotas, remotasNotas, { it.syncId }, { it.updatedAt })
-            fusionadaNotas.forEach { repositorioNotas!!.insertarNota(it) }
+            val remotasNotas = parseNotas(
+                backup["notas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora)
+            aplicarMergeNotas(repositorioNotas!!.obtenerTodas(), remotasNotas)
 
-            // ── FINANZAS ─────────────────────────────────────────────────────
-            // Para login en dispositivo nuevo: merge SUMA los presupuestos de
-            // ambos lados (syncIds diferentes). El usuario puede editar después.
-            val remotasFinanzas  = parseFinanzas(backup["finanzas"] as? List<Map<String, Any>> ?: emptyList(), ahora)
-            val localesFinanzas  = repositorioFinanzas!!.obtenerTodasLasFinanzasSuspend()
-            val fusionadaFinanzas = merge(localesFinanzas, remotasFinanzas, { it.syncId }, { it.updatedAt })
-            repositorioFinanzas!!.restaurarDatosFinanzas(fusionadaFinanzas)
+            val remotasFinanzas = parseFinanzas(
+                backup["finanzas"] as? List<Map<String, Any>> ?: emptyList(), ahora)
+            aplicarMergeFinanzas(repositorioFinanzas!!.obtenerTodasLasFinanzasSuspend(), remotasFinanzas)
 
-            // ── TRANSACCIONES ────────────────────────────────────────────────
-            val remotasTx  = parseTransacciones(backup["transacciones"] as? List<Map<String, Any>> ?: emptyList(), ahora)
-            val localesTx  = repositorioFinanzas!!.obtenerTodasLasTransacciones()
-            val fusionadaTx = merge(localesTx, remotasTx, { it.syncId }, { it.updatedAt })
-            repositorioFinanzas!!.restaurarTransacciones(fusionadaTx)
+            val remotasTx = parseTransacciones(
+                backup["transacciones"] as? List<Map<String, Any>> ?: emptyList(), ahora)
+            aplicarMergeTransacciones(repositorioFinanzas!!.obtenerTodasLasTransacciones(), remotasTx)
+
+            FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+                try { subirAsync(uid, tomarSnapshotLocal()) } catch (_: Exception) { }
+            }
 
         } catch (_: Exception) {
-            // El próximo snapshot reintentará
         } finally {
             estaHaciendoMerge = false
             withContext(Dispatchers.Main) { estaCargando.value = false }
-            // Subir estado fusionado para que el otro dispositivo lo reciba
-            val uid = FirebaseAuth.getInstance().currentUser?.uid
-            if (uid != null) {
-                try { subirAsync(uid, tomarSnapshotLocal()) } catch (_: Exception) { }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // APLICAR MERGE
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private suspend fun aplicarMergeTareas(locales: List<Tarea>, remotas: List<Tarea>) {
+        val mapaLocal = locales.filter { it.syncId.isNotEmpty() }.associateBy { it.syncId }
+
+        for (remota in remotas) {
+            if (remota.syncId.isEmpty()) continue
+            val local = mapaLocal[remota.syncId]
+            when {
+                local == null && !remota.esta_borrada ->
+                    repositorioTareas!!.agregarTarea(remota.copy(id_tarea = 0))
+
+                local != null && remota.updatedAt > local.updatedAt ->
+                    repositorioTareas!!.agregarTarea(remota.copy(id_tarea = local.id_tarea))
             }
         }
     }
 
-    /**
-     * Merge genérico last-write-wins por syncId.
-     *
-     *   Solo remota → insertar
-     *   Solo local  → conservar (cambio offline)
-     *   Ambas       → tomar la con mayor updatedAt
-     */
-    private fun <T> merge(
-        locales:     List<T>,
-        remotas:     List<T>,
-        syncIdOf:    (T) -> String,
-        updatedAtOf: (T) -> Long
-    ): List<T> {
-        val mapaLocal  = locales.associateBy { syncIdOf(it) }
-        val mapaRemoto = remotas.associateBy { syncIdOf(it) }
-        val resultado  = mutableListOf<T>()
+    private suspend fun aplicarMergeNotas(locales: List<Nota>, remotas: List<Nota>) {
+        val mapaLocal = locales.filter { it.syncId.isNotEmpty() }.associateBy { it.syncId }
 
-        // Items remotos: ganar el más reciente
-        for ((syncId, remota) in mapaRemoto) {
-            val local = mapaLocal[syncId]
-            resultado.add(
-                if (local == null || updatedAtOf(remota) >= updatedAtOf(local)) remota
-                else local
-            )
+        for (remota in remotas) {
+            if (remota.syncId.isEmpty()) continue
+            val local = mapaLocal[remota.syncId]
+            when {
+                local == null && !remota.esta_borrada ->
+                    repositorioNotas!!.insertarNota(remota.copy(id_nota = 0))
+
+                local != null && remota.updatedAt > local.updatedAt ->
+                    repositorioNotas!!.insertarNota(remota.copy(id_nota = local.id_nota))
+            }
         }
-        // Items solo locales (offline): conservar siempre
-        for ((syncId, local) in mapaLocal) {
-            if (!mapaRemoto.containsKey(syncId)) resultado.add(local)
+    }
+
+    private suspend fun aplicarMergeFinanzas(
+        locales: List<PresupuestoSemanal>,
+        remotas: List<PresupuestoSemanal>
+    ) {
+        val mapaLocal = locales.filter { it.syncId.isNotEmpty() }.associateBy { it.syncId }
+
+        for (remota in remotas) {
+            if (remota.syncId.isEmpty()) continue
+            val local = mapaLocal[remota.syncId]
+            when {
+                local == null ->
+                    repositorioFinanzas!!.insertarPresupuesto(remota.copy(id_finanza = 0))
+
+                local != null && remota.updatedAt > local.updatedAt ->
+                    repositorioFinanzas!!.insertarPresupuesto(remota.copy(id_finanza = local.id_finanza))
+            }
         }
-        return resultado
+    }
+
+    private suspend fun aplicarMergeTransacciones(
+        locales: List<Transaccion>,
+        remotas: List<Transaccion>
+    ) {
+        val mapaLocal = locales.filter { it.syncId.isNotEmpty() }.associateBy { it.syncId }
+
+        val finanzasActualizadas = repositorioFinanzas!!
+            .obtenerTodasLasFinanzasSuspend()
+            .associateBy { it.id_finanza }
+
+        for (remota in remotas) {
+            if (remota.syncId.isEmpty()) continue
+            val local = mapaLocal[remota.syncId]
+
+            when {
+                local == null && !remota.esta_borrada -> {
+                    val idFinanzaLocal = if (finanzasActualizadas.containsKey(remota.id_finanza)) {
+                        remota.id_finanza
+                    } else {
+                        finanzasActualizadas.values
+                            .maxByOrNull { it.updatedAt }
+                            ?.id_finanza ?: remota.id_finanza
+                    }
+                    repositorioFinanzas!!.restaurarTransacciones(
+                        listOf(remota.copy(id_transaccion = 0, id_finanza = idFinanzaLocal))
+                    )
+                }
+
+                local != null && remota.updatedAt > local.updatedAt ->
+                    repositorioFinanzas!!.restaurarTransacciones(
+                        listOf(remota.copy(id_transaccion = local.id_transaccion))
+                    )
+            }
+        }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // SNAPSHOT LOCAL
+    // SNAPSHOT LOCAL y SUBIDA
     // ─────────────────────────────────────────────────────────────────────────
 
     private suspend fun tomarSnapshotLocal() = Snapshot(
@@ -295,24 +429,19 @@ object SyncManager {
         transacciones = repositorioFinanzas!!.obtenerTodasLasTransacciones()
     )
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // SUBIDA
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun subirAsync(uid: String, snap: Snapshot) {
         FirebaseFirestore.getInstance()
             .collection("usuarios").document(uid)
             .set(buildDoc(snap))
-        // No necesitamos hacer nada en el listener de éxito:
-        // hasPendingWrites maneja el eco automáticamente
     }
 
     private fun buildDoc(snap: Snapshot): HashMap<String, Any> = hashMapOf(
         "perfil" to mapOf(
-            "nombre"      to nombreCached,
-            "apellido"    to apellidoCached,
-            "correo"      to (FirebaseAuth.getInstance().currentUser?.email ?: ""),
-            "ultima_sinc" to Timestamp.now()
+            "nombre"           to nombreCached,
+            "apellido"         to apellidoCached,
+            "correo"           to (FirebaseAuth.getInstance().currentUser?.email ?: ""),
+            "ultima_sinc"      to Timestamp.now(),
+            "active_device_id" to deviceId
         ),
         "datos" to mapOf(
             "tareas"        to snap.tareas.map        { tareaAMap(it)       },
@@ -323,8 +452,7 @@ object SyncManager {
     )
 
     // ─────────────────────────────────────────────────────────────────────────
-    // PARSERS — Firestore Map → modelo Room
-    // syncId y updatedAt son obligatorios para el merge
+    // PARSERS
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun parseTareas(raw: List<Map<String, Any>>, hoy: String, ahora: Long) = raw.map { m ->
@@ -385,7 +513,7 @@ object SyncManager {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // SERIALIZACIÓN — incluye syncId y updatedAt (obligatorios para el merge)
+    // SERIALIZACIÓN
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun tareaAMap(t: Tarea) = mapOf(

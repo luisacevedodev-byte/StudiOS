@@ -14,7 +14,9 @@ import com.luixard.studios.interfaz.finanzas.FinanzasFragment
 import com.luixard.studios.interfaz.notas.NotasFragment
 import com.luixard.studios.interfaz.tareas.ListaTareasFragment
 import com.luixard.studios.interfaz.inicio.DashboardFragment
-import com.luixard.studios.interfaz.perfil.PerfilFragment // NUEVO IMPORT PARA EL PERFIL
+import com.luixard.studios.interfaz.perfil.PerfilFragment
+import android.widget.Toast
+import com.luixard.studios.datos.sync.SyncManager
 
 class MainActivity : AppCompatActivity() {
 
@@ -60,6 +62,7 @@ class MainActivity : AppCompatActivity() {
                 btnNavVincular.visibility = android.view.View.VISIBLE
             }
         }
+
 
         // --- LISTENERS ---
 
@@ -132,6 +135,13 @@ class MainActivity : AppCompatActivity() {
                 val colorGris = androidx.core.content.ContextCompat.getColor(this, R.color.gris_texto)
                 ivStatus.setColorFilter(colorGris)
                 tvStatus.setTextColor(colorGris)
+            }
+        }
+        SyncManager.alCerrarSesionPorOtroDispositivo = {
+            runOnUiThread {
+                Toast.makeText(this,
+                    "Se cerró la sesión, nuevo inicio de sesión en otro dispositivo.",
+                    Toast.LENGTH_LONG).show()
             }
         }
     }

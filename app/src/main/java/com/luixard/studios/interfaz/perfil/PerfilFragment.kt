@@ -10,6 +10,7 @@ import android.view.*
 import android.widget.*
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -21,6 +22,7 @@ import com.luixard.studios.AplicacionStudiOS
 import com.luixard.studios.R
 import com.luixard.studios.datos.sync.SyncManager
 import com.luixard.studios.utilidades.MensajesUI
+import kotlinx.coroutines.launch
 
 class PerfilFragment : Fragment() {
 
@@ -75,6 +77,16 @@ class PerfilFragment : Fragment() {
         if (abrirVincular) {
             arguments?.putBoolean("abrirVincularDirecto", false)
             mostrarDialogoMenuAuth("Vincular Cuenta")
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            SyncManager.loginCompletado.collect { completado ->
+                if (completado) {
+                    viewModel.verificarSesion()
+                    // Resetear para el próximo login
+                    SyncManager.loginCompletado.value = false
+                }
+            }
         }
 
         viewModel.verificarSesion()
@@ -150,8 +162,8 @@ class PerfilFragment : Fragment() {
             if (!correo.isNullOrEmpty()) tvEmailSubtitulo.text = correo
         }
         viewModel.usuarioLogueado.observe(viewLifecycleOwner) { logueado ->
-            cardVincular.visibility      = if (logueado) View.GONE  else View.VISIBLE
-            cardIniciarSesion.visibility = if (logueado) View.GONE  else View.VISIBLE
+            cardVincular.visibility      = if (logueado) View.GONE   else View.VISIBLE
+            cardIniciarSesion.visibility = if (logueado) View.GONE   else View.VISIBLE
             cardCerrarSesion.visibility  = if (logueado) View.VISIBLE else View.GONE
             if (!logueado) {
                 cargarNombreUsuario()
@@ -254,9 +266,10 @@ class PerfilFragment : Fragment() {
                 .addOnSuccessListener {
                     guardarNombreUsuario("$nom $ape".trim())
                     viewModel.actualizarNombreInmediato(nom, ape)
+                    // ✅ onNuevaCuentaVinculada emitirá loginCompletado cuando termine.
+                    // El collector de arriba llamará verificarSesion() en ese momento.
                     SyncManager.onNuevaCuentaVinculada(nom, ape)
                     dialog.dismiss()
-                    viewModel.verificarSesion()
                     MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con éxito!")
                 }
                 .addOnFailureListener { e ->
@@ -310,7 +323,6 @@ class PerfilFragment : Fragment() {
                             }
                             SyncManager.onInicioSesion(uid, nom, ape)
                             dialog.dismiss()
-                            viewModel.verificarSesion()
                             MensajesUI.exito(requireActivity(), "¡Bienvenido de nuevo!")
                         }
                 }
@@ -378,13 +390,9 @@ class PerfilFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // Código verificado → enviar enlace de restablecimiento de Firebase
-            // No se necesita dialogo_nueva_password: Firebase gestiona el cambio
-            // de contraseña de forma segura desde el enlace del correo.
             FirebaseAuth.getInstance().sendPasswordResetEmail(cor)
                 .addOnSuccessListener {
                     dialog.dismiss()
-                    // Mostrar mensaje durante 8 segundos mencionando SPAM
                     mostrarMensajeResetContrasena(cor)
                 }
                 .addOnFailureListener {
@@ -407,7 +415,6 @@ class PerfilFragment : Fragment() {
             .setPositiveButton("Entendido") { d, _ -> d.dismiss() }
             .show()
 
-        // Cerrar automáticamente después de 8 segundos
         Handler(Looper.getMainLooper()).postDelayed({
             if (alertDialog.isShowing && isAdded) alertDialog.dismiss()
         }, 8_000)

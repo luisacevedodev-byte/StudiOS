@@ -10,7 +10,7 @@ import com.luixard.studios.datos.sync.SyncManager
 
 class AplicacionStudiOS : Application() {
 
-    val baseDatos by lazy { BaseDatos.getDatabase(this) }
+    val baseDatos       by lazy { BaseDatos.getDatabase(this) }
 
     val repositorioTareas   by lazy { TareaRepositorio(baseDatos.tareaDao()) }
     val repositorioFinanzas by lazy { FinanzasRepositorio(baseDatos.finanzasDao()) }
@@ -19,6 +19,6 @@ class AplicacionStudiOS : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        SyncManager.init(repositorioTareas, repositorioNotas, repositorioFinanzas)
+        SyncManager.init(this, repositorioTareas, repositorioNotas, repositorioFinanzas)
     }
 }
