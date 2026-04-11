@@ -93,12 +93,7 @@ class PerfilFragment : Fragment() {
             .edit().putString(KEY_NOMBRE_USUARIO, nombre).apply()
     }
 
-    /**
-     * Diálogo de edición de nombre con dos campos separados:
-     * Nombre (obligatorio) y Apellido (opcional).
-     */
     private fun mostrarDialogoEditarNombre() {
-        // Recuperar nombre y apellido actuales para pre-llenar
         val nombreActual = tvNombreUsuario.text.toString().trim()
         val partes       = nombreActual.split(" ", limit = 2)
         val nomActual    = partes.getOrNull(0) ?: ""
@@ -107,10 +102,6 @@ class PerfilFragment : Fragment() {
         val dialogView = LayoutInflater.from(requireContext())
             .inflate(R.layout.dialogo_editar_nombre, null)
 
-        // El layout dialogo_editar_nombre debe tener:
-        //   etNuevoNombre    → campo Nombre (obligatorio)
-        //   etNuevoApellido  → campo Apellido (opcional)
-        // Si solo tienes un campo (etNuevoNombre), agrega etNuevoApellido al XML.
         val etNombre   = dialogView.findViewById<TextInputEditText>(R.id.etNuevoNombre)
         val etApellido = dialogView.findViewById<TextInputEditText>(R.id.etNuevoApellido)
         val tilNombre  = dialogView.findViewById<TextInputLayout>(R.id.tilNuevoNombre)
@@ -216,7 +207,6 @@ class PerfilFragment : Fragment() {
             val conf = etConf?.text.toString()
 
             when {
-                // Nombre obligatorio
                 nom.isEmpty() -> {
                     MensajesUI.error(requireActivity(), "El nombre no puede estar vacío")
                     return@setOnClickListener
@@ -234,26 +224,12 @@ class PerfilFragment : Fragment() {
                     return@setOnClickListener
                 }
                 else -> {
-                    // Verificar si el correo ya tiene cuenta antes de enviar código
-                    FirebaseAuth.getInstance().fetchSignInMethodsForEmail(cor)
-                        .addOnSuccessListener { result ->
-                            if (!result.signInMethods.isNullOrEmpty()) {
-                                // Correo ya registrado
-                                MensajesUI.error(
-                                    requireActivity(),
-                                    "Ya existe una cuenta con este correo. Intenta iniciar sesión."
-                                )
-                            } else {
-                                // Correo libre → enviar código de verificación
-                                viewModel.generarCodigoVerificacion()
-                                viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
-                                dialog.dismiss()
-                                mostrarDialogoVerificacionRegistro(cor, pas, nom, ape)
-                            }
-                        }
-                        .addOnFailureListener {
-                            MensajesUI.error(requireActivity(), "Error al verificar el correo. Intenta de nuevo.")
-                        }
+                    // Enviar código directo — si el correo ya existe,
+                    // createUserWithEmailAndPassword lo detectará con ERROR_EMAIL_ALREADY_IN_USE
+                    viewModel.generarCodigoVerificacion()
+                    viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
+                    dialog.dismiss()
+                    mostrarDialogoVerificacionRegistro(cor, pas, nom, ape)
                 }
             }
         }
@@ -322,7 +298,6 @@ class PerfilFragment : Fragment() {
             dialog.dismiss(); mostrarDialogoMenuAuth("Iniciar Sesión")
         }
 
-        // Botón "¿Olvidaste tu contraseña?"
         view.findViewById<TextView>(R.id.tvOlvidasteContrasena)?.setOnClickListener {
             dialog.dismiss()
             mostrarDialogoRecuperarPassword()
@@ -360,13 +335,17 @@ class PerfilFragment : Fragment() {
                         }
                 }
                 .addOnFailureListener { e ->
+                    // ── FIX: Firebase con Email Enumeration Protection activa devuelve
+                    // ERROR_INVALID_CREDENTIAL tanto para contraseña incorrecta como para
+                    // usuario inexistente. Se muestra un mensaje genérico en ese caso. ──
                     val ex  = e as? FirebaseAuthException
                     val msg = when (ex?.errorCode) {
-                        "ERROR_USER_NOT_FOUND",
-                        "ERROR_INVALID_CREDENTIAL"  -> "No existe una cuenta con este correo."
-                        "ERROR_WRONG_PASSWORD"      -> "Contraseña incorrecta. Inténtalo de nuevo."
-                        "ERROR_TOO_MANY_REQUESTS"   -> "Demasiados intentos. Espera un momento."
-                        else                        -> "Correo o contraseña incorrectos."
+                        "ERROR_USER_NOT_FOUND"             -> "No existe una cuenta con este correo."
+                        "ERROR_WRONG_PASSWORD"             -> "Contraseña incorrecta. Inténtalo de nuevo."
+                        "ERROR_INVALID_CREDENTIAL",
+                        "ERROR_INVALID_LOGIN_CREDENTIALS"  -> "Correo o contraseña incorrectos."
+                        "ERROR_TOO_MANY_REQUESTS"          -> "Demasiados intentos. Espera un momento."
+                        else                               -> "Correo o contraseña incorrectos."
                     }
                     MensajesUI.error(requireActivity(), msg)
                 }
@@ -391,25 +370,14 @@ class PerfilFragment : Fragment() {
                 return@setOnClickListener
             }
 
-            // Verificar que el correo tenga cuenta registrada antes de enviar
-            FirebaseAuth.getInstance().fetchSignInMethodsForEmail(cor)
-                .addOnSuccessListener { result ->
-                    if (result.signInMethods.isNullOrEmpty()) {
-                        MensajesUI.error(
-                            requireActivity(),
-                            "No existe una cuenta con este correo."
-                        )
-                    } else {
-                        // Generar y enviar código de verificación
-                        viewModel.generarCodigoVerificacion()
-                        viewModel.enviarEmail(viewModel.prepararDatosEmail("Usuario", cor))
-                        dialog.dismiss()
-                        mostrarDialogoVerificacionRecuperacion(cor)
-                    }
-                }
-                .addOnFailureListener {
-                    MensajesUI.error(requireActivity(), "Error al verificar el correo.")
-                }
+            // ── FIX: fetchSignInMethodsForEmail siempre devuelve lista vacía cuando
+            // Firebase tiene Email Enumeration Protection activa, aunque la cuenta exista.
+            // Solución: enviar el código directamente. Si la cuenta no existe, el usuario
+            // lo descubrirá al intentar cambiar la contraseña (sendPasswordResetEmail). ──
+            viewModel.generarCodigoVerificacion()
+            viewModel.enviarEmail(viewModel.prepararDatosEmail("Usuario", cor))
+            dialog.dismiss()
+            mostrarDialogoVerificacionRecuperacion(cor)
         }
         dialog.show()
     }
@@ -437,7 +405,6 @@ class PerfilFragment : Fragment() {
                 MensajesUI.error(requireActivity(), "El código no coincide")
                 return@setOnClickListener
             }
-            // Código correcto → abrir formulario de nueva contraseña
             dialog.dismiss()
             mostrarDialogoNuevaPassword(cor)
         }
@@ -447,7 +414,6 @@ class PerfilFragment : Fragment() {
     // ── RECUPERAR CONTRASEÑA — PASO 3: nueva contraseña ──────────────────────
 
     private fun mostrarDialogoNuevaPassword(cor: String) {
-        // Crear el diálogo con dos campos: nueva contraseña y confirmar contraseña
         val dialogView = LayoutInflater.from(requireContext()).inflate(
             R.layout.dialogo_nueva_password, null
         )
@@ -475,6 +441,8 @@ class PerfilFragment : Fragment() {
                     return@setOnClickListener
                 }
                 else -> {
+                    // sendPasswordResetEmail envía el enlace aunque la cuenta no exista
+                    // (Firebase no revela si existe o no por seguridad)
                     FirebaseAuth.getInstance().sendPasswordResetEmail(cor)
                         .addOnSuccessListener {
                             dialog.dismiss()

@@ -6,22 +6,26 @@ import kotlinx.coroutines.flow.Flow
 
 class NotaRepositorio(private val notaDao: NotaDao) {
 
-    // Solo notas visibles para el usuario (esta_borrada = false)
+    // Para ViewModels — solo notas visibles (esta_borrada = false)
     val todasLasNotas: Flow<List<Nota>> = notaDao.obtenerTodasLasNotas()
+
+    // Para SyncManager autoBackup — incluye borradas para propagarlas a la nube
+    val todasLasNotasParaBackup: Flow<List<Nota>> = notaDao.obtenerTodasParaBackup()
 
     suspend fun agregarNota(nota: Nota) = notaDao.insertarNota(nota)
 
-    // Usado en restauración — inserta con ID real (REPLACE)
+    // Inserción directa con ID real — para restaurar desde nube
     suspend fun insertarNota(nota: Nota) = notaDao.insertarNota(nota)
 
     suspend fun actualizarNota(nota: Nota) = notaDao.actualizarNota(nota)
 
-    // Borrado lógico — el merge propaga la eliminación al otro dispositivo
-    suspend fun eliminarNota(id: Int) = notaDao.borrarLogico(id)
+    // Borrado LÓGICO — el borrado se propaga a otros dispositivos vía syncId
+    suspend fun eliminarNota(nota: Nota) =
+        notaDao.marcarNotaBorrada(nota.id_nota, System.currentTimeMillis())
 
-    // Limpia toda la tabla antes de restaurar desde la nube
-    suspend fun eliminarTodas() = notaDao.eliminarTodas()
-
-    // Todas (incluyendo borradas) — para sync
+    // Para MERGE en SyncManager — devuelve TODAS (incluyendo borradas)
     suspend fun obtenerTodas(): List<Nota> = notaDao.obtenerTodasSuspend()
+
+    // Limpia toda la tabla antes de restaurar desde la nube (uso interno)
+    suspend fun eliminarTodas() = notaDao.eliminarTodas()
 }

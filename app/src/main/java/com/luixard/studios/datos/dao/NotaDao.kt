@@ -21,23 +21,26 @@ interface NotaDao {
     @Update
     suspend fun actualizarNota(nota: Nota)
 
-    // ── Borrado lógico (para sync) ────────────────────────────────────────────
+    // Borrado LÓGICO — el borrado se propaga a otros dispositivos vía sync
     @Query("UPDATE notas SET esta_borrada = 1, updated_at = :timestamp WHERE id_nota = :id")
-    suspend fun borrarLogico(id: Int, timestamp: Long = System.currentTimeMillis())
+    suspend fun marcarNotaBorrada(id: Int, timestamp: Long)
 
-    // Borrado físico — solo para casos extremos (sincronización interna)
+    // Borrado físico — solo para limpieza interna, nunca llamar desde UI
     @Delete
-    suspend fun eliminarNotaFisico(nota: Nota)
+    suspend fun eliminarNotaFisica(nota: Nota)
 
-    // Limpiar toda la tabla — solo se usa en restauración total
     @Query("DELETE FROM notas")
     suspend fun eliminarTodas()
 
-    // Solo notas NO borradas — lo que ve el usuario
+    // Para DISPLAY: excluye notas borradas
     @Query("SELECT * FROM notas WHERE esta_borrada = 0 ORDER BY id_nota DESC")
     fun obtenerTodasLasNotas(): Flow<List<Nota>>
 
-    // Todas incluyendo borradas — para el merge de sync
+    // Para BACKUP: incluye borradas para que el borrado se propague a la nube
+    @Query("SELECT * FROM notas ORDER BY id_nota DESC")
+    fun obtenerTodasParaBackup(): Flow<List<Nota>>
+
+    // Para MERGE en SyncManager: incluye borradas
     @Query("SELECT * FROM notas ORDER BY id_nota DESC")
     suspend fun obtenerTodasSuspend(): List<Nota>
 }

@@ -89,7 +89,7 @@ class FinanzasViewModel(private val repositorio: FinanzasRepositorio) : ViewMode
     }
 
     fun borrarTransaccion(transaccion: Transaccion) {
-        viewModelScope.launch { repositorio.eliminarTransaccion(transaccion.id_transaccion) }
+        viewModelScope.launch { repositorio.eliminarTransaccion(transaccion) }
     }
 
     fun obtenerTransacciones(idFinanza: Int): Flow<List<Transaccion>> {

@@ -3,8 +3,8 @@ package com.luixard.studios.datos.modelos
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import java.util.Date
 import java.util.UUID
+import java.util.Date
 
 @Entity(tableName = "finanzas")
 data class PresupuestoSemanal(
@@ -14,11 +14,11 @@ data class PresupuestoSemanal(
     val id_usuario: Int?,
     val presupuesto_semanal_meta: Double,
     val fecha_inicio: Date,
-    val fecha_fin: Date?,                // null hasta que se cierre la semana
-
-    @ColumnInfo(name = "sync_id")
-    val syncId: String = UUID.randomUUID().toString(),
+    val fecha_fin: Date?,
 
     @ColumnInfo(name = "updated_at")
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "sync_id")
+    val syncId: String = UUID.randomUUID().toString()
 )

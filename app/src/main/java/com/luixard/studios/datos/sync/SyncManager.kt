@@ -26,8 +26,32 @@ import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.UUID
 
+/**
+ * Motor de sincronización bidireccional con estrategia MERGE.
+ *
+ * ── Estrategia anti-duplicados y anti-pérdida ─────────────────────────────
+ *
+ * ANTES (destructiva): eliminar todo local → insertar todo lo que viene de Firestore.
+ *   Problema: si el dispositivo B tuvo cambios offline, se pierden al reconectar.
+ *
+ * AHORA (merge por syncId + last-write-wins):
+ *   1. Construir un mapa local: syncId → entidad
+ *   2. Para cada entidad remota:
+ *      - Si NO existe local → insertar
+ *      - Si existe local con updatedAt MÁS ANTIGUO → actualizar con la versión remota
+ *      - Si existe local con updatedAt MÁS RECIENTE → conservar local (no tocar)
+ *   3. Para cada entidad local que NO existe en remoto:
+ *      - Si es más nueva que la última sincronización → subir (cambio offline)
+ *      - Si es más vieja → ya fue borrada en otro dispositivo → marcar borrada local
+ *   4. Después del merge, el auto-backup dispara y sube el estado fusionado.
+ *
+ * Con esto:
+ *   - Dispositivo A modifica tarea X mientras B estaba offline.
+ *   - B reconecta, recibe snapshot.
+ *   - B compara updatedAt de su tarea X con el remoto → toma la más nueva.
+ *   - B sube el estado fusionado → A lo recibe y también queda al día.
+ */
 @OptIn(FlowPreview::class)
 object SyncManager {
 
@@ -40,9 +64,17 @@ object SyncManager {
     private var inicializado = false
 
     // ── Anti-loop ─────────────────────────────────────────────────────────────
+    // estaSubiendoANube      → este dispositivo escribió; ignorar su propio echo
+    // estaHaciendoMerge      → merge en curso; auto-backup espera para no
+    //                          subir un estado parcial
+    // ignorarProximoSnapshot → al vincular cuenta nueva, suprimir primer echo
     @Volatile private var estaSubiendoANube      = false
-    @Volatile private var estaRestaurandoLocal   = false
+    @Volatile private var estaHaciendoMerge      = false
     @Volatile private var ignorarProximoSnapshot = false
+
+    // Timestamp de la última sincronización exitosa.
+    // Se usa para distinguir "cambio offline nuevo" vs "registro ya borrado en otro lado".
+    @Volatile private var ultimaSincMs: Long = 0L
 
     private var snapshotListener: ListenerRegistration? = null
     private var autoBackupJob:    Job? = null
@@ -92,6 +124,10 @@ object SyncManager {
     // EVENTOS DE AUTENTICACIÓN
     // ─────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Cuenta nueva recién creada.
+     * Sube datos locales y suprime el eco del primer snapshot.
+     */
     fun onNuevaCuentaVinculada(nombre: String, apellido: String) {
         if (!listo()) return
         actualizarNombre(nombre, apellido)
@@ -100,14 +136,10 @@ object SyncManager {
         _estaCargando.value = true
         scope.launch {
             try {
-                val tareas        = repositorioTareas!!.todasLasTareas.first()
-                val notas         = repositorioNotas!!.todasLasNotas.first()
-                val finanzas      = repositorioFinanzas!!.todosLosRegistros.first()
-                val transacciones = repositorioFinanzas!!.obtenerTodasLasTransacciones()
-
+                val snapshot = tomarSnapshotLocal()
                 ignorarProximoSnapshot = true
                 estaSubiendoANube      = true
-                subirSync(uid, tareas, notas, finanzas, transacciones)
+                subirAsync(uid, snapshot)
             } catch (_: Exception) {
             } finally {
                 withContext(Dispatchers.Main) { _estaCargando.value = false }
@@ -117,6 +149,10 @@ object SyncManager {
         activarRespaldoAutomatico()
     }
 
+    /**
+     * Login exitoso.
+     * El snapshot listener se encarga de hacer el merge con los datos del servidor.
+     */
     fun onInicioSesion(uid: String, nombre: String = "", apellido: String = "") {
         if (!listo()) return
         if (nombre.isNotEmpty()) actualizarNombre(nombre, apellido)
@@ -124,6 +160,7 @@ object SyncManager {
         activarRespaldoAutomatico()
     }
 
+    /** App reiniciada con sesión activa — reactivar listeners. */
     fun onSesionActiva(uid: String) {
         if (!listo()) return
         activarEscuchaEnTiempoReal(uid)
@@ -132,13 +169,13 @@ object SyncManager {
 
     fun onCerrarSesion() {
         snapshotListener?.remove()
-        snapshotListener         = null
+        snapshotListener       = null
         autoBackupJob?.cancel()
-        autoBackupJob            = null
-        estaSubiendoANube        = false
-        estaRestaurandoLocal     = false
-        ignorarProximoSnapshot   = false
-        _nombreDisplay.value     = ""
+        autoBackupJob          = null
+        estaSubiendoANube      = false
+        estaHaciendoMerge      = false
+        ignorarProximoSnapshot = false
+        _nombreDisplay.value   = ""
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -161,15 +198,15 @@ object SyncManager {
                     ignorarProximoSnapshot = false
                     return@addSnapshotListener
                 }
-                if (estaSubiendoANube || estaRestaurandoLocal) return@addSnapshotListener
+                if (estaSubiendoANube || estaHaciendoMerge) return@addSnapshotListener
 
                 val data = snapshot.data ?: return@addSnapshotListener
-                scope.launch { restaurarDesdeNube(data) }
+                scope.launch { hacerMerge(data) }
             }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // AUTO-BACKUP — 4 flows combinados
+    // AUTO-BACKUP — escucha los 4 flows; debounce 500 ms
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun activarRespaldoAutomatico() {
@@ -179,194 +216,187 @@ object SyncManager {
         autoBackupJob = scope.launch {
             combine(
                 repositorioTareas!!.todasLasTareas,
-                repositorioNotas!!.todasLasNotas,
+                repositorioNotas!!.todasLasNotasParaBackup,
                 repositorioFinanzas!!.todosLosRegistros,
                 repositorioFinanzas!!.todasLasTransaccionesFlow
             ) { tareas, notas, finanzas, transacciones ->
-                Cuadrupla(tareas, notas, finanzas, transacciones)
+                Snapshot(tareas, notas, finanzas, transacciones)
             }
                 .debounce(500)
-                .collect { (tareas, notas, finanzas, transacciones) ->
+                .collect { snap ->
                     val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return@collect
-                    if (estaRestaurandoLocal) return@collect
-                    subir(uid, tareas, notas, finanzas, transacciones)
+                    if (estaHaciendoMerge) return@collect
+                    subirAsync(uid, snap)
                 }
         }
     }
 
-    private data class Cuadrupla(
-        val tareas:        List<Tarea>,
-        val notas:         List<Nota>,
-        val finanzas:      List<PresupuestoSemanal>,
-        val transacciones: List<Transaccion>
-    )
-
     // ─────────────────────────────────────────────────────────────────────────
-    // RESTAURACIÓN CON MERGE INTELIGENTE
+    // MERGE — núcleo del sistema
     //
-    // Reglas:
-    //   • Se usa syncId (UUID) como clave — nunca el id_tarea/id_nota (autoGenerate)
-    //     porque dos dispositivos generan IDs 1,2,3... iguales que chocan.
-    //   • Solo en nube     → insertar local (dato nuevo del otro dispositivo)
-    //   • Solo local       → no hacer nada (el autoBackup lo subirá)
-    //   • En ambos lados:
-    //       - remoto.updatedAt > local.updatedAt → aplicar remoto (más reciente)
-    //       - local.updatedAt >= remoto.updatedAt → no tocar (local es más reciente)
-    //   • esta_borrada = true en el remoto → propagar borrado al local
+    // Recibe el documento de Firestore y lo fusiona con el estado local.
+    // Para cada entidad se aplica last-write-wins por updatedAt.
+    // Después del merge, el auto-backup sube el estado fusionado.
     // ─────────────────────────────────────────────────────────────────────────
 
-    private suspend fun restaurarDesdeNube(data: Map<String, Any>) {
+    private suspend fun hacerMerge(data: Map<String, Any>) {
         if (!listo()) return
         val backup = data["datos"] as? Map<*, *> ?: return
         val hoy    = fmt.format(Date())
         val ahora  = System.currentTimeMillis()
 
-        estaRestaurandoLocal = true
+        estaHaciendoMerge = true
         withContext(Dispatchers.Main) { _estaCargando.value = true }
 
         try {
             // ── TAREAS ──────────────────────────────────────────────────────
-            val tareasRemotas = (backup["tareas"] as? List<Map<String, Any>> ?: emptyList())
-                .map { m -> mapToTarea(m, hoy, ahora) }
-            val tareasLocales = repositorioTareas!!.obtenerTodas()
-            mergearTareas(tareasLocales, tareasRemotas)
+            val remotasTareas = parseTareas(
+                backup["tareas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora
+            )
+            val localesTareas = repositorioTareas!!.obtenerTodas()
+            val mergeadaTareas = mergeEntidades(
+                locales  = localesTareas,
+                remotas  = remotasTareas,
+                syncIdOf = { it.syncId },
+                updatedAtOf = { it.updatedAt }
+            )
+            // Insertar el resultado fusionado (REPLACE por id/syncId no duplica)
+            repositorioTareas!!.restaurarTareasMasivo(mergeadaTareas)
 
             // ── NOTAS ───────────────────────────────────────────────────────
-            val notasRemotas = (backup["notas"] as? List<Map<String, Any>> ?: emptyList())
-                .map { m -> mapToNota(m, hoy, ahora) }
-            val notasLocales = repositorioNotas!!.obtenerTodas()
-            mergearNotas(notasLocales, notasRemotas)
+            val remotasNotas = parseNotas(
+                backup["notas"] as? List<Map<String, Any>> ?: emptyList(), hoy, ahora
+            )
+            val localesNotas = repositorioNotas!!.obtenerTodas()
+            val mergeadaNotas = mergeEntidades(
+                locales     = localesNotas,
+                remotas     = remotasNotas,
+                syncIdOf    = { it.syncId },
+                updatedAtOf = { it.updatedAt }
+            )
+            mergeadaNotas.forEach { repositorioNotas!!.insertarNota(it) }
 
-            // ── FINANZAS ────────────────────────────────────────────────────
-            val finanzasRemotas = (backup["finanzas"] as? List<Map<String, Any>> ?: emptyList())
-                .map { m -> mapToFinanza(m, ahora) }
-            val finanzasLocales = repositorioFinanzas!!.obtenerTodasLasFinanzasSuspend()
-            mergearFinanzas(finanzasLocales, finanzasRemotas)
+            // ── FINANZAS + TRANSACCIONES ──────────────────────────────────
+            // Finanzas (presupuestos): sin borrado lógico, se reemplaza por syncId
+            val remotasFinanzas = parseFinanzas(
+                backup["finanzas"] as? List<Map<String, Any>> ?: emptyList(), ahora
+            )
+            val localesFinanzas = repositorioFinanzas!!.obtenerTodasLasFinanzasSuspend()
+            val mergeadaFinanzas = mergeEntidades(
+                locales     = localesFinanzas,
+                remotas     = remotasFinanzas,
+                syncIdOf    = { it.syncId },
+                updatedAtOf = { it.updatedAt }
+            )
+            repositorioFinanzas!!.restaurarDatosFinanzas(mergeadaFinanzas)
 
-            // ── TRANSACCIONES ───────────────────────────────────────────────
-            val txRemotas = (backup["transacciones"] as? List<Map<String, Any>> ?: emptyList())
-                .map { m -> mapToTransaccion(m, ahora) }
-            val txLocales = repositorioFinanzas!!.obtenerTodasLasTransacciones()
-            mergearTransacciones(txLocales, txRemotas)
+            // Transacciones
+            val remotasTx = parseTransacciones(
+                backup["transacciones"] as? List<Map<String, Any>> ?: emptyList(), ahora
+            )
+            val localesTx = repositorioFinanzas!!.obtenerTodasLasTransacciones()
+            val mergeadaTx = mergeEntidades(
+                locales     = localesTx,
+                remotas     = remotasTx,
+                syncIdOf    = { it.syncId },
+                updatedAtOf = { it.updatedAt }
+            )
+            repositorioFinanzas!!.restaurarTransacciones(mergeadaTx)
+
+            ultimaSincMs = ahora
 
         } catch (_: Exception) {
+            // Fallo silencioso — el siguiente snapshot reintentará
         } finally {
-            estaRestaurandoLocal = false
+            estaHaciendoMerge = false
             withContext(Dispatchers.Main) { _estaCargando.value = false }
+            // Subir el estado fusionado para que el otro dispositivo lo reciba
+            subirTrasSync()
+        }
+    }
+
+    /**
+     * Algoritmo de merge genérico — last-write-wins por updatedAt.
+     *
+     * Para cada syncId:
+     *   - Solo remota → tomar remota
+     *   - Solo local  → conservar (cambio offline; el auto-backup lo subirá)
+     *   - Ambas       → tomar la que tenga mayor updatedAt
+     *
+     * Resultado: lista que representa el estado fusionado.
+     */
+    private fun <T> mergeEntidades(
+        locales:     List<T>,
+        remotas:     List<T>,
+        syncIdOf:    (T) -> String,
+        updatedAtOf: (T) -> Long
+    ): List<T> {
+        val mapaLocal  = locales.associateBy { syncIdOf(it) }
+        val mapaRemoto = remotas.associateBy { syncIdOf(it) }
+
+        val resultado = mutableListOf<T>()
+
+        // Items que existen en remoto
+        for ((syncId, remota) in mapaRemoto) {
+            val local = mapaLocal[syncId]
+            if (local == null) {
+                // Nuevo en remoto → agregar
+                resultado.add(remota)
+            } else {
+                // Existe en ambos → ganar el más reciente
+                resultado.add(
+                    if (updatedAtOf(remota) >= updatedAtOf(local)) remota else local
+                )
+            }
+        }
+
+        // Items que SOLO existen en local (creados o modificados offline)
+        for ((syncId, local) in mapaLocal) {
+            if (!mapaRemoto.containsKey(syncId)) {
+                resultado.add(local)
+            }
+        }
+
+        return resultado
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SUBIDA tras merge — dispara el auto-backup con el estado fusionado
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun subirTrasSync() {
+        if (!listo()) return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        scope.launch {
+            try {
+                val snap = tomarSnapshotLocal()
+                subirAsync(uid, snap)
+            } catch (_: Exception) { }
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // FUNCIONES DE MERGE — comparan por syncId, no por id local
+    // SNAPSHOT LOCAL — lee el estado actual de Room
     // ─────────────────────────────────────────────────────────────────────────
 
-    private suspend fun mergearTareas(locales: List<Tarea>, remotas: List<Tarea>) {
-        val mapaLocal  = locales.associateBy { it.syncId }
-        val mapaRemoto = remotas.associateBy { it.syncId }
-        val todosIds   = (mapaLocal.keys + mapaRemoto.keys).toSet()
-
-        for (sid in todosIds) {
-            val local  = mapaLocal[sid]
-            val remoto = mapaRemoto[sid]
-            when {
-                local == null -> {
-                    // Tarea nueva que vino de otro dispositivo — insertar aquí
-                    repositorioTareas!!.agregarTarea(remoto!!)
-                }
-                remoto == null -> {
-                    // Solo local — el autoBackup la subirá
-                    Unit
-                }
-                remoto.updatedAt > local.updatedAt -> {
-                    // Remoto más reciente — aplica sus cambios (incluyendo si borró)
-                    repositorioTareas!!.agregarTarea(remoto)
-                }
-                // Local igual o más reciente — no tocar
-            }
-        }
-    }
-
-    private suspend fun mergearNotas(locales: List<Nota>, remotas: List<Nota>) {
-        val mapaLocal  = locales.associateBy { it.syncId }
-        val mapaRemoto = remotas.associateBy { it.syncId }
-        val todosIds   = (mapaLocal.keys + mapaRemoto.keys).toSet()
-
-        for (sid in todosIds) {
-            val local  = mapaLocal[sid]
-            val remoto = mapaRemoto[sid]
-            when {
-                local == null  -> repositorioNotas!!.insertarNota(remoto!!)
-                remoto == null -> Unit
-                remoto.updatedAt > local.updatedAt -> repositorioNotas!!.insertarNota(remoto)
-            }
-        }
-    }
-
-    private suspend fun mergearFinanzas(
-        locales: List<PresupuestoSemanal>,
-        remotas: List<PresupuestoSemanal>
-    ) {
-        val mapaLocal  = locales.associateBy { it.syncId }
-        val mapaRemoto = remotas.associateBy { it.syncId }
-        val todosIds   = (mapaLocal.keys + mapaRemoto.keys).toSet()
-
-        for (sid in todosIds) {
-            val local  = mapaLocal[sid]
-            val remoto = mapaRemoto[sid]
-            when {
-                local == null  -> repositorioFinanzas!!.insertarPresupuesto(remoto!!)
-                remoto == null -> Unit
-                remoto.updatedAt > local.updatedAt -> repositorioFinanzas!!.insertarPresupuesto(remoto)
-            }
-        }
-    }
-
-    private suspend fun mergearTransacciones(
-        locales: List<Transaccion>,
-        remotas: List<Transaccion>
-    ) {
-        val mapaLocal  = locales.associateBy { it.syncId }
-        val mapaRemoto = remotas.associateBy { it.syncId }
-        val todosIds   = (mapaLocal.keys + mapaRemoto.keys).toSet()
-
-        for (sid in todosIds) {
-            val local  = mapaLocal[sid]
-            val remoto = mapaRemoto[sid]
-            when {
-                local == null  -> repositorioFinanzas!!.restaurarTransacciones(listOf(remoto!!))
-                remoto == null -> Unit
-                remoto.updatedAt > local.updatedAt ->
-                    repositorioFinanzas!!.restaurarTransacciones(listOf(remoto))
-            }
-        }
+    private suspend fun tomarSnapshotLocal(): Snapshot {
+        return Snapshot(
+            tareas        = repositorioTareas!!.todasLasTareas.first(),
+            notas         = repositorioNotas!!.todasLasNotasParaBackup.first(),
+            finanzas      = repositorioFinanzas!!.todosLosRegistros.first(),
+            transacciones = repositorioFinanzas!!.obtenerTodasLasTransacciones()
+        )
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // SUBIDA
+    // SUBIDA — fire-and-forget
     // ─────────────────────────────────────────────────────────────────────────
 
-    private suspend fun subirSync(
-        uid: String, tareas: List<Tarea>, notas: List<Nota>,
-        finanzas: List<PresupuestoSemanal>, transacciones: List<Transaccion>
-    ) {
-        FirebaseFirestore.getInstance()
-            .collection("usuarios").document(uid)
-            .set(buildDoc(tareas, notas, finanzas, transacciones))
-            .addOnCompleteListener {
-                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-                    estaSubiendoANube = false
-                }, 2_000)
-            }
-    }
-
-    private fun subir(
-        uid: String, tareas: List<Tarea>, notas: List<Nota>,
-        finanzas: List<PresupuestoSemanal>, transacciones: List<Transaccion>
-    ) {
+    private fun subirAsync(uid: String, snap: Snapshot) {
         estaSubiendoANube = true
         FirebaseFirestore.getInstance()
             .collection("usuarios").document(uid)
-            .set(buildDoc(tareas, notas, finanzas, transacciones))
+            .set(buildDoc(snap))
             .addOnCompleteListener {
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     estaSubiendoANube = false
@@ -375,13 +405,10 @@ object SyncManager {
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // CONSTRUCCIÓN DEL DOCUMENTO
+    // CONSTRUCCIÓN DEL DOCUMENTO FIRESTORE
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun buildDoc(
-        tareas: List<Tarea>, notas: List<Nota>,
-        finanzas: List<PresupuestoSemanal>, transacciones: List<Transaccion>
-    ): HashMap<String, Any> = hashMapOf(
+    private fun buildDoc(snap: Snapshot): HashMap<String, Any> = hashMapOf(
         "perfil" to mapOf(
             "nombre"      to nombreCached,
             "apellido"    to apellidoCached,
@@ -389,20 +416,86 @@ object SyncManager {
             "ultima_sinc" to Timestamp.now()
         ),
         "datos" to mapOf(
-            "tareas"        to tareas.map        { tareaAMap(it)       },
-            "notas"         to notas.map         { notaAMap(it)        },
-            "finanzas"      to finanzas.map      { finanzaAMap(it)     },
-            "transacciones" to transacciones.map { transaccionAMap(it) }
+            "tareas"        to snap.tareas.map        { tareaAMap(it)       },
+            "notas"         to snap.notas.map         { notaAMap(it)        },
+            "finanzas"      to snap.finanzas.map      { finanzaAMap(it)     },
+            "transacciones" to snap.transacciones.map { transaccionAMap(it) }
         )
     )
 
     // ─────────────────────────────────────────────────────────────────────────
-    // SERIALIZACIÓN — incluye syncId, updatedAt y esta_borrada en todos los mapas
+    // PARSERS — Firestore Map → modelo Room
+    // IMPORTANTE: syncId y updatedAt son incluidos para que el merge funcione
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun parseTareas(raw: List<Map<String, Any>>, hoy: String, ahora: Long): List<Tarea> =
+        raw.map { m ->
+            Tarea(
+                id_tarea          = (m["id_tarea"]         as? Long)?.toInt() ?: 0,
+                id_materia        = (m["id_materia"]       as? Long)?.toInt(),
+                id_prioridad      = m["id_prioridad"]      as? String ?: "MEDIA",
+                titulo_tarea      = m["titulo_tarea"]      as? String ?: "",
+                descripcion_tarea = m["descripcion_tarea"] as? String,
+                fecha_entrega     = m["fecha_entrega"]     as? String ?: hoy,
+                es_completada     = m["es_completada"]     as? Boolean ?: false,
+                esta_borrada      = m["esta_borrada"]      as? Boolean ?: false,
+                fecha_creacion    = (m["fecha_creacion"]   as? Long) ?: ahora,
+                updatedAt         = (m["updated_at"]       as? Long) ?: ahora,
+                syncId            = m["sync_id"]           as? String ?: java.util.UUID.randomUUID().toString()
+            )
+        }
+
+    private fun parseNotas(raw: List<Map<String, Any>>, hoy: String, ahora: Long): List<Nota> =
+        raw.map { m ->
+            Nota(
+                id_nota        = (m["id_nota"]       as? Long)?.toInt() ?: 0,
+                titulo         = m["titulo"]          as? String ?: "",
+                contenido      = m["contenido"]       as? String ?: "",
+                fecha_creacion = m["fecha_creacion"]  as? String ?: hoy,
+                color_fondo    = m["color_fondo"]     as? String,
+                esta_borrada   = m["esta_borrada"]    as? Boolean ?: false,
+                updatedAt      = (m["updated_at"]     as? Long) ?: ahora,
+                syncId         = m["sync_id"]         as? String ?: java.util.UUID.randomUUID().toString()
+            )
+        }
+
+    private fun parseFinanzas(raw: List<Map<String, Any>>, ahora: Long): List<PresupuestoSemanal> =
+        raw.map { m ->
+            PresupuestoSemanal(
+                id_finanza               = (m["id_finanza"]              as? Long)?.toInt() ?: 0,
+                id_usuario               = (m["id_usuario"]              as? Long)?.toInt(),
+                presupuesto_semanal_meta = m["presupuesto_semanal_meta"] as? Double ?: 0.0,
+                fecha_inicio             = Date(m["fecha_inicio"]         as? Long ?: ahora),
+                fecha_fin                = (m["fecha_fin"]                as? Long)?.let { Date(it) },
+                updatedAt                = (m["updated_at"]               as? Long) ?: ahora,
+                syncId                   = m["sync_id"]                   as? String ?: java.util.UUID.randomUUID().toString()
+            )
+        }
+
+    private fun parseTransacciones(raw: List<Map<String, Any>>, ahora: Long): List<Transaccion> =
+        raw.map { m ->
+            Transaccion(
+                id_transaccion    = (m["id_transaccion"]   as? Long)?.toInt() ?: 0,
+                id_usuario        = (m["id_usuario"]       as? Long)?.toInt(),
+                id_finanza        = (m["id_finanza"]       as? Long)?.toInt() ?: 0,
+                id_categoria      = (m["id_categoria"]     as? Long)?.toInt(),
+                tipo_transaccion  = m["tipo_transaccion"]  as? String ?: "Gasto",
+                monto             = m["monto"]             as? Double ?: 0.0,
+                fecha_transaccion = Date(m["fecha_transaccion"] as? Long ?: ahora),
+                nota_transaccion  = m["nota_transaccion"]  as? String,
+                esta_borrada      = m["esta_borrada"]      as? Boolean ?: false,
+                updatedAt         = (m["updated_at"]       as? Long) ?: ahora,
+                syncId            = m["sync_id"]           as? String ?: java.util.UUID.randomUUID().toString()
+            )
+        }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // SERIALIZACIÓN — Room modelo → Firestore Map
+    // syncId y updatedAt son obligatorios para el merge
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun tareaAMap(t: Tarea): Map<String, Any?> = mapOf(
         "id_tarea"          to t.id_tarea,
-        "sync_id"           to t.syncId,
         "titulo_tarea"      to t.titulo_tarea,
         "descripcion_tarea" to t.descripcion_tarea,
         "fecha_entrega"     to t.fecha_entrega,
@@ -411,33 +504,33 @@ object SyncManager {
         "es_completada"     to t.es_completada,
         "esta_borrada"      to t.esta_borrada,
         "fecha_creacion"    to t.fecha_creacion,
-        "updated_at"        to t.updatedAt
+        "updated_at"        to t.updatedAt,   // ← clave para el merge
+        "sync_id"           to t.syncId       // ← identificador único global
     )
 
     private fun notaAMap(n: Nota): Map<String, Any?> = mapOf(
         "id_nota"        to n.id_nota,
-        "sync_id"        to n.syncId,
         "titulo"         to n.titulo,
         "contenido"      to n.contenido,
         "fecha_creacion" to n.fecha_creacion,
         "color_fondo"    to n.color_fondo,
-        "esta_borrada"   to n.estaBorrada,
-        "updated_at"     to n.updatedAt
+        "esta_borrada"   to n.esta_borrada,
+        "updated_at"     to n.updatedAt,
+        "sync_id"        to n.syncId
     )
 
     private fun finanzaAMap(f: PresupuestoSemanal): Map<String, Any?> = mapOf(
         "id_finanza"               to f.id_finanza,
-        "sync_id"                  to f.syncId,
         "id_usuario"               to f.id_usuario,
         "presupuesto_semanal_meta" to f.presupuesto_semanal_meta,
         "fecha_inicio"             to f.fecha_inicio.time,
         "fecha_fin"                to f.fecha_fin?.time,
-        "updated_at"               to f.updatedAt
+        "updated_at"               to f.updatedAt,
+        "sync_id"                  to f.syncId
     )
 
     private fun transaccionAMap(t: Transaccion): Map<String, Any?> = mapOf(
         "id_transaccion"    to t.id_transaccion,
-        "sync_id"           to t.syncId,
         "id_usuario"        to t.id_usuario,
         "id_finanza"        to t.id_finanza,
         "id_categoria"      to t.id_categoria,
@@ -445,60 +538,19 @@ object SyncManager {
         "monto"             to t.monto,
         "fecha_transaccion" to t.fecha_transaccion.time,
         "nota_transaccion"  to t.nota_transaccion,
-        "esta_borrada"      to t.estaBorrada,
-        "updated_at"        to t.updatedAt
+        "esta_borrada"      to t.esta_borrada,
+        "updated_at"        to t.updatedAt,
+        "sync_id"           to t.syncId
     )
 
     // ─────────────────────────────────────────────────────────────────────────
-    // DESERIALIZACIÓN — convierte Map de Firestore en modelos Room
+    // DATA CLASS AUXILIAR
     // ─────────────────────────────────────────────────────────────────────────
 
-    private fun mapToTarea(m: Map<String, Any>, hoy: String, ahora: Long) = Tarea(
-        id_tarea          = (m["id_tarea"]         as? Long)?.toInt() ?: 0,
-        syncId            = m["sync_id"]            as? String ?: UUID.randomUUID().toString(),
-        id_materia        = (m["id_materia"]        as? Long)?.toInt(),
-        id_prioridad      = m["id_prioridad"]       as? String ?: "MEDIA",
-        titulo_tarea      = m["titulo_tarea"]       as? String ?: "",
-        descripcion_tarea = m["descripcion_tarea"]  as? String,
-        fecha_entrega     = m["fecha_entrega"]      as? String ?: hoy,
-        es_completada     = m["es_completada"]      as? Boolean ?: false,
-        esta_borrada      = m["esta_borrada"]       as? Boolean ?: false,
-        fecha_creacion    = (m["fecha_creacion"]    as? Long) ?: ahora,
-        updatedAt         = (m["updated_at"]        as? Long) ?: 0L
-    )
-
-    private fun mapToNota(m: Map<String, Any>, hoy: String, ahora: Long) = Nota(
-        id_nota        = (m["id_nota"]      as? Long)?.toInt() ?: 0,
-        syncId         = m["sync_id"]       as? String ?: UUID.randomUUID().toString(),
-        titulo         = m["titulo"]         as? String ?: "",
-        contenido      = m["contenido"]      as? String ?: "",
-        fecha_creacion = m["fecha_creacion"] as? String ?: hoy,
-        color_fondo    = m["color_fondo"]    as? String,
-        estaBorrada    = m["esta_borrada"]   as? Boolean ?: false,
-        updatedAt      = (m["updated_at"]    as? Long) ?: 0L
-    )
-
-    private fun mapToFinanza(m: Map<String, Any>, ahora: Long) = PresupuestoSemanal(
-        id_finanza               = (m["id_finanza"]              as? Long)?.toInt() ?: 0,
-        syncId                   = m["sync_id"]                  as? String ?: UUID.randomUUID().toString(),
-        id_usuario               = (m["id_usuario"]              as? Long)?.toInt(),
-        presupuesto_semanal_meta = m["presupuesto_semanal_meta"] as? Double ?: 0.0,
-        fecha_inicio             = Date(m["fecha_inicio"]         as? Long ?: ahora),
-        fecha_fin                = (m["fecha_fin"]               as? Long)?.let { Date(it) },
-        updatedAt                = (m["updated_at"]              as? Long) ?: 0L
-    )
-
-    private fun mapToTransaccion(m: Map<String, Any>, ahora: Long) = Transaccion(
-        id_transaccion    = (m["id_transaccion"]   as? Long)?.toInt() ?: 0,
-        syncId            = m["sync_id"]            as? String ?: UUID.randomUUID().toString(),
-        id_usuario        = (m["id_usuario"]        as? Long)?.toInt(),
-        id_finanza        = (m["id_finanza"]        as? Long)?.toInt() ?: 0,
-        id_categoria      = (m["id_categoria"]      as? Long)?.toInt(),
-        tipo_transaccion  = m["tipo_transaccion"]   as? String ?: "Gasto",
-        monto             = m["monto"]              as? Double ?: 0.0,
-        fecha_transaccion = Date(m["fecha_transaccion"] as? Long ?: ahora),
-        nota_transaccion  = m["nota_transaccion"]   as? String,
-        estaBorrada       = m["esta_borrada"]        as? Boolean ?: false,
-        updatedAt         = (m["updated_at"]         as? Long) ?: 0L
+    private data class Snapshot(
+        val tareas:        List<Tarea>,
+        val notas:         List<Nota>,
+        val finanzas:      List<PresupuestoSemanal>,
+        val transacciones: List<Transaccion>
     )
 }

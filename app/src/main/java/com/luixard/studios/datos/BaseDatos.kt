@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
         Usuario::class,
         HistorialAvanceTarea::class
     ],
-    version = 12,           // ← 10 → 11 (updated_at) → 12 (sync_id + esta_borrada en notas y transacciones)
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -46,7 +46,8 @@ abstract class BaseDatos : RoomDatabase() {
         @Volatile
         private var INSTANCIA: BaseDatos? = null
 
-        // ── Migración 10 → 11: agrega updated_at ─────────────────────────────
+        // ── Migración 10 → 11 ─────────────────────────────────────────────────
+        // Agrega updated_at para merge inteligente
         private val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE tareas        ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0")
@@ -56,20 +57,24 @@ abstract class BaseDatos : RoomDatabase() {
             }
         }
 
-        // ── Migración 11 → 12: agrega sync_id (UUID) y esta_borrada ──────────
-        // sync_id: permite que el merge distinga ítems entre dispositivos
-        //          sin confundir IDs autoGenerate que chocan.
-        // esta_borrada en notas/transacciones: permite propagar borrados
-        //          al otro dispositivo sin que "resuciten" en el merge.
+        // ── Migración 11 → 12 ─────────────────────────────────────────────────
+        // Agrega sync_id (UUID por dispositivo) y esta_borrada en nota/transaccion
+        // LOWER(HEX(RANDOMBLOB(16))) genera un UUID aleatorio directamente en SQLite
         private val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // sync_id — valor vacío por defecto; SyncManager lo llena al primer backup
+                // sync_id para cada tabla
                 database.execSQL("ALTER TABLE tareas        ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE notas         ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE transacciones ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE finanzas      ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
 
-                // esta_borrada solo en notas y transacciones (tareas ya la tenían)
+                // Asignar UUIDs aleatorios a todos los registros existentes
+                database.execSQL("UPDATE tareas        SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
+                database.execSQL("UPDATE notas         SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
+                database.execSQL("UPDATE transacciones SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
+                database.execSQL("UPDATE finanzas      SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
+
+                // Borrado lógico para nota y transaccion (para propagación entre dispositivos)
                 database.execSQL("ALTER TABLE notas         ADD COLUMN esta_borrada INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE transacciones ADD COLUMN esta_borrada INTEGER NOT NULL DEFAULT 0")
             }

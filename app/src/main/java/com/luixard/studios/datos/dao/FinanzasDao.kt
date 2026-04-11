@@ -9,8 +9,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface FinanzasDao {
 
-    // ── Presupuesto ───────────────────────────────────────────────────────────
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarPresupuesto(presupuesto: PresupuestoSemanal): Long
 
@@ -19,6 +17,9 @@ interface FinanzasDao {
 
     @Query("DELETE FROM finanzas")
     suspend fun eliminarTodasLasFinanzas()
+
+    @Query("DELETE FROM transacciones")
+    suspend fun eliminarTodasLasTransacciones()
 
     @Query("SELECT * FROM finanzas ORDER BY id_finanza DESC LIMIT 1")
     fun obtenerPresupuestoActual(): Flow<PresupuestoSemanal?>
@@ -29,38 +30,31 @@ interface FinanzasDao {
     @Query("SELECT * FROM finanzas ORDER BY id_finanza DESC")
     suspend fun obtenerTodasLasFinanzasSuspend(): List<PresupuestoSemanal>
 
-    // ── Transacciones ─────────────────────────────────────────────────────────
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarTransaccion(transaccion: Transaccion)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarTransacciones(transacciones: List<Transaccion>)
 
-    // Borrado lógico: NO borra físicamente, marca esta_borrada = 1
-    // Así el otro dispositivo puede detectar que fue eliminada en el merge
-    @Query("UPDATE transacciones SET esta_borrada = 1, updated_at = :ts WHERE id_transaccion = :id")
-    suspend fun borrarTransaccionLogico(id: Int, ts: Long = System.currentTimeMillis())
+    // Borrado LÓGICO — el borrado se propaga a otros dispositivos vía sync
+    @Query("UPDATE transacciones SET esta_borrada = 1, updated_at = :timestamp WHERE id_transaccion = :id")
+    suspend fun marcarTransaccionBorrada(id: Int, timestamp: Long)
 
-    // Borrado físico — solo para limpieza interna antes de restaurar
+    // Borrado físico — solo para limpieza interna
     @Delete
-    suspend fun eliminarTransaccionFisico(transaccion: Transaccion)
+    suspend fun eliminarTransaccionFisica(transaccion: Transaccion)
 
-    @Query("DELETE FROM transacciones")
-    suspend fun eliminarTodasLasTransacciones()
-
-    // Solo transacciones NO borradas — lo que ve el usuario
+    // Para DISPLAY: excluye transacciones borradas
     @Query("SELECT * FROM transacciones WHERE id_finanza = :idFinanza AND esta_borrada = 0 ORDER BY fecha_transaccion DESC")
     fun obtenerTransaccionesPorFinanza(idFinanza: Int): Flow<List<Transaccion>>
 
-    // Todas incluyendo borradas — para backup y merge
-    @Query("SELECT * FROM transacciones")
-    suspend fun obtenerTodasLasTransaccionesSuspend(): List<Transaccion>
-
+    // Para BACKUP: incluye borradas para propagar el borrado a la nube
     @Query("SELECT * FROM transacciones ORDER BY fecha_transaccion DESC")
     fun obtenerTodasLasTransaccionesFlow(): Flow<List<Transaccion>>
 
-    // ── Categorías ────────────────────────────────────────────────────────────
+    // Para MERGE en SyncManager: incluye borradas
+    @Query("SELECT * FROM transacciones")
+    suspend fun obtenerTodasLasTransaccionesSuspend(): List<Transaccion>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarCategoria(categoria: CategoriaGasto)

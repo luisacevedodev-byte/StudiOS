@@ -16,11 +16,11 @@ data class Nota(
     val color_fondo: String? = null,
 
     @ColumnInfo(name = "esta_borrada")
-    val estaBorrada: Boolean = false,
-
-    @ColumnInfo(name = "sync_id")
-    val syncId: String = UUID.randomUUID().toString(),
+    val esta_borrada: Boolean = false,
 
     @ColumnInfo(name = "updated_at")
-    val updatedAt: Long = System.currentTimeMillis()
+    val updatedAt: Long = System.currentTimeMillis(),
+
+    @ColumnInfo(name = "sync_id")
+    val syncId: String = UUID.randomUUID().toString()
 )

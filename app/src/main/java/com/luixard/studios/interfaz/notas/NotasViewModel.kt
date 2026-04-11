@@ -49,7 +49,7 @@ class NotasViewModel(aplicacion: Application) : AndroidViewModel(aplicacion) {
 
     fun borrarNota(nota: Nota) {
         viewModelScope.launch {
-            repositorio.eliminarNota(nota.id_nota)
+            repositorio.eliminarNota(nota)
         }
     }
 
