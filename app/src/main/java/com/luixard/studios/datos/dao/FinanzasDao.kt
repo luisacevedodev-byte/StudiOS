@@ -36,25 +36,23 @@ interface FinanzasDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarTransacciones(transacciones: List<Transaccion>)
 
-    // Borrado LÓGICO — el borrado se propaga a otros dispositivos vía sync
     @Query("UPDATE transacciones SET esta_borrada = 1, updated_at = :timestamp WHERE id_transaccion = :id")
     suspend fun marcarTransaccionBorrada(id: Int, timestamp: Long)
 
-    // Borrado físico — solo para limpieza interna
     @Delete
     suspend fun eliminarTransaccionFisica(transaccion: Transaccion)
 
-    // Para DISPLAY: excluye transacciones borradas
     @Query("SELECT * FROM transacciones WHERE id_finanza = :idFinanza AND esta_borrada = 0 ORDER BY fecha_transaccion DESC")
     fun obtenerTransaccionesPorFinanza(idFinanza: Int): Flow<List<Transaccion>>
 
-    // Para BACKUP: incluye borradas para propagar el borrado a la nube
     @Query("SELECT * FROM transacciones ORDER BY fecha_transaccion DESC")
     fun obtenerTodasLasTransaccionesFlow(): Flow<List<Transaccion>>
 
-    // Para MERGE en SyncManager: incluye borradas
     @Query("SELECT * FROM transacciones")
     suspend fun obtenerTodasLasTransaccionesSuspend(): List<Transaccion>
+
+    @Query("SELECT COUNT(*) FROM transacciones WHERE id_categoria = :idCategoria AND esta_borrada = 0")
+    suspend fun contarTransaccionesPorCategoria(idCategoria: Int): Int
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarCategoria(categoria: CategoriaGasto)

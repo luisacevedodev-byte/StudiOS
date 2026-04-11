@@ -6,6 +6,7 @@ import com.luixard.studios.datos.modelos.CategoriaGasto
 import com.luixard.studios.datos.modelos.PresupuestoSemanal
 import com.luixard.studios.datos.modelos.Transaccion
 import com.luixard.studios.datos.repositorios.FinanzasRepositorio
+import com.luixard.studios.datos.sync.SyncManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,30 +45,22 @@ class FinanzasViewModel(private val repositorio: FinanzasRepositorio) : ViewMode
             val actual = presupuestoActual.value
 
             val presupuestoParaGuardar = if (actual != null) {
-                // ── CRÍTICO PARA EL MERGE ────────────────────────────────────
-                // Conservar el syncId original para que el merge identifique
-                // este presupuesto en el otro dispositivo y aplique last-write-wins.
-                // Actualizar updatedAt para que el merge sepa que esta versión
-                // es más reciente que la del otro dispositivo.
                 actual.copy(
                     presupuesto_semanal_meta = monto,
-                    updatedAt               = System.currentTimeMillis()  // ← CRÍTICO
+                    updatedAt               = System.currentTimeMillis()
                 )
             } else {
                 val calInicio = Calendar.getInstance().apply {
                     firstDayOfWeek = Calendar.MONDAY
                     set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
+                    set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0);      set(Calendar.MILLISECOND, 0)
                 }
                 val calFin = Calendar.getInstance().apply {
                     firstDayOfWeek = Calendar.MONDAY
                     set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
                     add(Calendar.DAY_OF_YEAR, 6)
-                    set(Calendar.HOUR_OF_DAY, 23)
-                    set(Calendar.MINUTE, 59)
+                    set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59)
                     set(Calendar.SECOND, 59)
                 }
                 PresupuestoSemanal(
@@ -83,7 +76,23 @@ class FinanzasViewModel(private val repositorio: FinanzasRepositorio) : ViewMode
     }
 
     fun borrarPresupuesto(presupuesto: PresupuestoSemanal) {
-        viewModelScope.launch { repositorio.eliminarPresupuesto(presupuesto) }
+        viewModelScope.launch {
+            // 1. Obtener las transacciones vinculadas ANTES de borrar el presupuesto
+            val txVinculadas = repositorio.obtenerTransacciones(presupuesto.id_finanza).first()
+
+            for (tx in txVinculadas) {
+                if (tx.syncId.isNotEmpty()) {
+                    SyncManager.registrarEliminacionPermanente(tx.syncId)
+                }
+                repositorio.eliminarTransaccion(tx)
+            }
+
+            if (presupuesto.syncId.isNotEmpty()) {
+                SyncManager.registrarEliminacionPermanente(presupuesto.syncId)
+            }
+
+            repositorio.eliminarPresupuesto(presupuesto)
+        }
     }
 
     fun registrarTransaccion(transaccion: Transaccion) {
@@ -91,16 +100,19 @@ class FinanzasViewModel(private val repositorio: FinanzasRepositorio) : ViewMode
     }
 
     fun borrarTransaccion(transaccion: Transaccion) {
-        viewModelScope.launch { repositorio.eliminarTransaccion(transaccion) }
+        viewModelScope.launch {
+            if (transaccion.syncId.isNotEmpty()) {
+                SyncManager.registrarEliminacionPermanente(transaccion.syncId)
+            }
+            repositorio.eliminarTransaccion(transaccion)
+        }
     }
 
-    fun obtenerTransacciones(idFinanza: Int): Flow<List<Transaccion>> {
-        return repositorio.obtenerTransacciones(idFinanza)
-    }
+    fun obtenerTransacciones(idFinanza: Int): Flow<List<Transaccion>> =
+        repositorio.obtenerTransacciones(idFinanza)
 
-    fun obtenerDetalleSemana(idFinanza: Int): Flow<List<Transaccion>> {
-        return repositorio.obtenerTransacciones(idFinanza)
-    }
+    fun obtenerDetalleSemana(idFinanza: Int): Flow<List<Transaccion>> =
+        repositorio.obtenerTransacciones(idFinanza)
 
     fun agregarCategoria(nombre: String) {
         viewModelScope.launch {
@@ -112,5 +124,10 @@ class FinanzasViewModel(private val repositorio: FinanzasRepositorio) : ViewMode
 
     fun borrarCategoria(categoria: CategoriaGasto) {
         viewModelScope.launch { repositorio.eliminarCategoria(categoria) }
+    }
+
+    suspend fun categoriaEstaEnUso(idCategoria: Int): Boolean {
+        val cantidad = repositorio.contarTransaccionesPorCategoria(idCategoria)
+        return cantidad > 0
     }
 }

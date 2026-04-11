@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.luixard.studios.AplicacionStudiOS
 import com.luixard.studios.datos.modelos.Tarea
 import com.luixard.studios.datos.repositorios.TareaRepositorio
+import com.luixard.studios.datos.sync.SyncManager
 import kotlinx.coroutines.launch
 
 class TareasViewModel(aplicacion: Application) : AndroidViewModel(aplicacion) {
@@ -18,33 +19,27 @@ class TareasViewModel(aplicacion: Application) : AndroidViewModel(aplicacion) {
         repositorio = TareaRepositorio(dao)
     }
 
-    // Estas variables se actualizan solas cada vez que la base de datos cambia
-    val tareasPendientes = repositorio.tareasPendientes.asLiveData()
-    val tareasCompletadas = repositorio.tareasCompletadas.asLiveData()
+    val tareasPendientes       = repositorio.tareasPendientes.asLiveData()
+    val tareasCompletadas      = repositorio.tareasCompletadas.asLiveData()
+    val tareasBorradas         = repositorio.tareasBorradas.asLiveData()
 
-    // CU-01: Añadir tarea
     fun guardarTarea(tarea: Tarea) {
         viewModelScope.launch {
             repositorio.agregarTarea(tarea)
         }
     }
 
-    // CU-03: Mover a la papelera (Borrado lógico)
     fun moverPapelera(id: Int) {
         viewModelScope.launch {
             repositorio.moverPapelera(id)
         }
     }
 
-    // CU-04: Completar tarea
     fun marcarComoCompletada(id: Int) {
         viewModelScope.launch {
             repositorio.completarTarea(id)
         }
     }
-
-    // --- NUEVAS FUNCIONES PARA EL HISTORIAL ---
-    val tareasBorradas = repositorio.tareasBorradas.asLiveData()
 
     fun restaurarTarea(id: Int) {
         viewModelScope.launch {
@@ -54,16 +49,14 @@ class TareasViewModel(aplicacion: Application) : AndroidViewModel(aplicacion) {
 
     fun eliminarPermanente(tarea: Tarea) {
         viewModelScope.launch {
+            SyncManager.registrarEliminacionPermanente(tarea.syncId)
             repositorio.eliminarPermanente(tarea)
         }
     }
 
     fun actualizarTextosDeTarea(tarea: Tarea) {
         viewModelScope.launch {
-            val tareaActualizada = tarea.copy(
-                updatedAt = System.currentTimeMillis()
-            )
-            repositorio.actualizarTarea(tareaActualizada)
+            repositorio.actualizarTarea(tarea.copy(updatedAt = System.currentTimeMillis()))
         }
     }
 }

@@ -45,6 +45,7 @@ class PerfilFragment : Fragment() {
         )
     }
 
+
     private val PREFS_NAME         = "StudiosPrefs"
     private val KEY_NOMBRE_USUARIO = "nombre_usuario"
 
@@ -64,6 +65,7 @@ class PerfilFragment : Fragment() {
         cardCerrarSesion  = view.findViewById(R.id.cardCerrarSesion)
         layoutCargando    = view.findViewById(R.id.layoutCargandoRespaldo)
         val btnEditarNombre = view.findViewById<ImageButton>(R.id.btnEditarNombre)
+
 
         cargarNombreUsuario()
         setupObservers()
@@ -89,6 +91,7 @@ class PerfilFragment : Fragment() {
             }
         }
 
+
         viewModel.verificarSesion()
     }
 
@@ -106,6 +109,7 @@ class PerfilFragment : Fragment() {
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_NOMBRE_USUARIO, nombre).apply()
     }
+
 
     private fun mostrarDialogoEditarNombre() {
         val nombreActual = tvNombreUsuario.text.toString().trim()

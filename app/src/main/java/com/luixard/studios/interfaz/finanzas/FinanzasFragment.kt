@@ -52,8 +52,8 @@ class FinanzasFragment : Fragment() {
             onDelete = { tx -> confirmarEliminarTransaccion(tx) }
         )
         binding.rvHistorialTransacciones.apply {
-            adapter        = adaptadorTransacciones
-            layoutManager  = LinearLayoutManager(requireContext())
+            adapter       = adaptadorTransacciones
+            layoutManager = LinearLayoutManager(requireContext())
         }
     }
 
@@ -69,10 +69,10 @@ class FinanzasFragment : Fragment() {
     }
 
     private fun configurarListeners() {
-        binding.btnEstablecerPresupuesto.setOnClickListener  { mostrarDialogoPresupuesto() }
-        binding.btnEditarPresupuesto.setOnClickListener      { mostrarDialogoPresupuesto() }
-        binding.btnConfiguracionFinanzas.setOnClickListener  { mostrarDialogoCategorias() }
-        binding.fabAgregarTransaccion.setOnClickListener     { mostrarDialogoSeleccion() }
+        binding.btnEstablecerPresupuesto.setOnClickListener { mostrarDialogoPresupuesto() }
+        binding.btnEditarPresupuesto.setOnClickListener     { mostrarDialogoPresupuesto() }
+        binding.btnConfiguracionFinanzas.setOnClickListener { mostrarDialogoCategorias() }
+        binding.fabAgregarTransaccion.setOnClickListener    { mostrarDialogoSeleccion() }
 
         binding.btnHistorialFinanzas.setOnClickListener {
             parentFragmentManager.beginTransaction()
@@ -95,17 +95,16 @@ class FinanzasFragment : Fragment() {
     }
 
     private fun gestionarEstadoVacio() {
-        binding.layoutEstadoVacio.visibility       = View.VISIBLE
-        binding.layoutEstadoLleno.visibility       = View.GONE
-        binding.btnEditarPresupuesto.visibility    = View.GONE
-        binding.btnBorrarPresupuesto.visibility    = View.GONE
-        binding.tvMovimientosTitulo.visibility     = View.GONE
+        binding.layoutEstadoVacio.visibility        = View.VISIBLE
+        binding.layoutEstadoLleno.visibility        = View.GONE
+        binding.btnEditarPresupuesto.visibility     = View.GONE
+        binding.btnBorrarPresupuesto.visibility     = View.GONE
+        binding.tvMovimientosTitulo.visibility      = View.GONE
         binding.rvHistorialTransacciones.visibility = View.GONE
-
         val format = NumberFormat.getCurrencyInstance(Locale.getDefault())
-        binding.tvMeta.text              = "Meta: ${format.format(0.0)}"
+        binding.tvMeta.text               = "Meta: ${format.format(0.0)}"
         binding.tvSaldoRestanteMonto.text = format.format(0.0)
-        binding.tvGastado.text           = "Gastado: ${format.format(0.0)}"
+        binding.tvGastado.text            = "Gastado: ${format.format(0.0)}"
         binding.progresoPresupuesto.progress = 0
         adaptadorTransacciones.submitList(emptyList())
     }
@@ -131,7 +130,6 @@ class FinanzasFragment : Fragment() {
         binding.layoutEstadoVacio.visibility    = View.GONE
         binding.layoutEstadoLleno.visibility    = View.VISIBLE
         binding.btnEditarPresupuesto.visibility = View.VISIBLE
-
         val format = NumberFormat.getCurrencyInstance(Locale.getDefault())
         binding.tvMeta.text = "Meta: ${format.format(presupuesto.presupuesto_semanal_meta)}"
     }
@@ -151,8 +149,8 @@ class FinanzasFragment : Fragment() {
         var ingresos = 0.0
         lista.forEach { if (it.tipo_transaccion == "Gasto") gastado += it.monto else ingresos += it.monto }
         val saldo    = (presupuesto.presupuesto_semanal_meta - gastado) + ingresos
-        binding.tvSaldoRestanteMonto.text = format.format(saldo)
-        binding.tvGastado.text            = "Gastado: ${format.format(gastado)}"
+        binding.tvSaldoRestanteMonto.text    = format.format(saldo)
+        binding.tvGastado.text               = "Gastado: ${format.format(gastado)}"
         val progreso = if (presupuesto.presupuesto_semanal_meta > 0)
             ((gastado / presupuesto.presupuesto_semanal_meta) * 100).toInt() else 0
         binding.progresoPresupuesto.progress = progreso
@@ -160,7 +158,7 @@ class FinanzasFragment : Fragment() {
 
     private fun mostrarDialogoSeleccion() {
         val selBinding = FinanzasDialogoSeleccionTransaccionBinding.inflate(layoutInflater)
-        val dialog = MaterialAlertDialogBuilder(requireContext()).setView(selBinding.root).create()
+        val dialog     = MaterialAlertDialogBuilder(requireContext()).setView(selBinding.root).create()
         selBinding.btnSeleccionarGasto.setOnClickListener   { dialog.dismiss(); mostrarDialogoRegistro(true) }
         selBinding.btnSeleccionarIngreso.setOnClickListener { dialog.dismiss(); mostrarDialogoRegistro(false) }
         dialog.show()
@@ -172,40 +170,46 @@ class FinanzasFragment : Fragment() {
 
         var listaActualCategorias = emptyList<CategoriaGasto>()
 
+        regBinding.tvTituloGasto.text = when {
+            transaccionAEditar != null && esGasto  -> "Editar Gasto"
+            transaccionAEditar != null && !esGasto -> "Editar Ingreso"
+            esGasto                                -> "Nuevo Gasto"
+            else                                   -> "Nuevo Ingreso"
+        }
+
         if (transaccionAEditar != null) {
-            regBinding.tvTituloGasto.text = if (esGasto) "Editar Gasto" else "Editar Ingreso"
             regBinding.etMontoGasto.setText(transaccionAEditar.monto.toString())
             regBinding.etNotaGasto.setText(transaccionAEditar.nota_transaccion)
             regBinding.btnGuardarGasto.text = "Guardar Cambios"
         }
 
+        // Ocultar selector de categoría para ingresos
         if (!esGasto) regBinding.tilCategoriaTransaccion.visibility = View.GONE
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.categorias.collect { listaCategorias ->
                 listaActualCategorias = listaCategorias
-                val nombres = listaCategorias.map { it.nombre_categoria }
+                val nombres       = listaCategorias.map { it.nombre_categoria }
                 val adapterSpinner = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, nombres)
                 regBinding.spinnerCategoria.setAdapter(adapterSpinner)
 
                 if (transaccionAEditar != null && esGasto) {
-                    val categoria = listaCategorias.find { it.id_categoria == transaccionAEditar.id_categoria }
-                    regBinding.spinnerCategoria.setText(categoria?.nombre_categoria, false)
+                    val cat = listaCategorias.find { it.id_categoria == transaccionAEditar.id_categoria }
+                    regBinding.spinnerCategoria.setText(cat?.nombre_categoria, false)
                 }
             }
         }
 
         regBinding.btnGuardarGasto.setOnClickListener {
-            val montoStr      = regBinding.etMontoGasto.text.toString()
-            val catStr        = regBinding.spinnerCategoria.text.toString()
-            val notaStr       = regBinding.etNotaGasto.text.toString()
-            val montoValido   = montoStr.isNotEmpty() && montoStr.toDouble() > 0
+            val montoStr       = regBinding.etMontoGasto.text.toString()
+            val catStr         = regBinding.spinnerCategoria.text.toString()
+            val notaStr        = regBinding.etNotaGasto.text.toString()
+            val montoValido    = montoStr.isNotEmpty() && montoStr.toDouble() > 0
             val categoriaValida = !esGasto || catStr.isNotEmpty()
 
             if (montoValido && categoriaValida) {
                 viewModel.presupuestoActual.value?.let { presupuesto ->
                     val categoriaSeleccionada = listaActualCategorias.find { it.nombre_categoria == catStr }
-
                     val transaccion = Transaccion(
                         id_transaccion    = transaccionAEditar?.id_transaccion ?: 0,
                         id_usuario        = null,
@@ -215,13 +219,7 @@ class FinanzasFragment : Fragment() {
                         monto             = montoStr.toDouble(),
                         fecha_transaccion = transaccionAEditar?.fecha_transaccion ?: Date(),
                         nota_transaccion  = notaStr.ifEmpty { if (esGasto) catStr else "Ingreso Extra" },
-                        // ── CRÍTICO PARA EL MERGE ────────────────────────────
-                        // syncId: conservar el original al editar para que el merge
-                        //         identifique la misma transacción en el otro dispositivo.
-                        //         Si se generara uno nuevo, se crearía un duplicado.
                         syncId            = transaccionAEditar?.syncId ?: java.util.UUID.randomUUID().toString(),
-                        // updatedAt: marca el momento de la edición/creación.
-                        //            El merge usa este valor para last-write-wins.
                         updatedAt         = System.currentTimeMillis()
                     )
                     viewModel.registrarTransaccion(transaccion)
@@ -244,15 +242,28 @@ class FinanzasFragment : Fragment() {
         val dialog     = MaterialAlertDialogBuilder(requireContext()).setView(catBinding.root).create()
 
         val adapterCat = AdaptadorCategorias(
-            onDelete = { cat ->
-                MaterialAlertDialogBuilder(requireContext())
-                    .setTitle("¿Eliminar categoría?")
-                    .setMessage("¿Seguro que desea borrar la categoría?")
-                    .setPositiveButton("Eliminar") { _, _ ->
-                        viewModel.borrarCategoria(cat)
-                        MensajesUI.exito(requireActivity(), "Categoría eliminada")
+            onDelete = { categoria ->
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val enUso = viewModel.categoriaEstaEnUso(categoria.id_categoria)
+                    if (enUso) {
+                        // Categoría en uso: no permitir borrar
+                        MensajesUI.error(
+                            requireActivity(),
+                            "No puedes eliminar \"${categoria.nombre_categoria}\" porque tiene transacciones registradas."
+                        )
+                    } else {
+                        // Categoría libre: confirmar y borrar
+                        MaterialAlertDialogBuilder(requireContext())
+                            .setTitle("¿Eliminar categoría?")
+                            .setMessage("¿Seguro que deseas borrar \"${categoria.nombre_categoria}\"?")
+                            .setPositiveButton("Eliminar") { _, _ ->
+                                viewModel.borrarCategoria(categoria)
+                                MensajesUI.exito(requireActivity(), "Categoría eliminada")
+                            }
+                            .setNegativeButton("Cancelar", null)
+                            .show()
                     }
-                    .setNegativeButton("Cancelar", null).show()
+                }
             }
         )
 

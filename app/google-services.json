@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "325522175519",
+    "firebase_url": "https://studios-f2de8-default-rtdb.firebaseio.com",
     "project_id": "studios-f2de8",
     "storage_bucket": "studios-f2de8.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.luixard.studios"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "325522175519-00nbena7tqe4vdhbgvtre3btj0v6k39j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.luixard.studios",
+            "certificate_hash": "5faffdcabe4ca36e588d8e4c9653da79964c0f91"
+          }
+        },
+        {
+          "client_id": "325522175519-digek82t86c113udhs4jub65osp7ugnv.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAdS0qe0Pm-itYWfaDNk8VyP1WSI7wERkM"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "325522175519-digek82t86c113udhs4jub65osp7ugnv.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

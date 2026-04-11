@@ -12,7 +12,6 @@ class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
     val categorias        : Flow<List<CategoriaGasto>> = finanzasDao.obtenerTodasLasCategorias()
     val todosLosRegistros : Flow<List<PresupuestoSemanal>> = finanzasDao.obtenerTodasLasFinanzas()
 
-    // Para SyncManager autoBackup — incluye transacciones borradas
     val todasLasTransaccionesFlow: Flow<List<Transaccion>> =
         finanzasDao.obtenerTodasLasTransaccionesFlow()
 
@@ -27,20 +26,16 @@ class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
     fun obtenerHistorialSemanas(): Flow<List<PresupuestoSemanal>> =
         finanzasDao.obtenerTodasLasFinanzas()
 
-    suspend fun realizarCierreSemanal(presupuestoActual: PresupuestoSemanal) =
-        finanzasDao.insertarPresupuesto(presupuestoActual)
+    suspend fun realizarCierreSemanal(presupuesto: PresupuestoSemanal) =
+        finanzasDao.insertarPresupuesto(presupuesto)
 
     // ── Transacciones ─────────────────────────────────────────────────────────
 
     suspend fun insertarTransaccion(transaccion: Transaccion) =
         finanzasDao.insertarTransaccion(transaccion)
 
-    // Borrado LÓGICO — propaga el borrado a otros dispositivos vía syncId
     suspend fun eliminarTransaccion(transaccion: Transaccion) =
-        finanzasDao.marcarTransaccionBorrada(
-            transaccion.id_transaccion,
-            System.currentTimeMillis()
-        )
+        finanzasDao.marcarTransaccionBorrada(transaccion.id_transaccion, System.currentTimeMillis())
 
     fun obtenerTransacciones(idFinanza: Int): Flow<List<Transaccion>> =
         finanzasDao.obtenerTransaccionesPorFinanza(idFinanza)
@@ -53,10 +48,13 @@ class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
     suspend fun eliminarCategoria(categoria: CategoriaGasto) =
         finanzasDao.eliminarCategoria(categoria)
 
+    suspend fun contarTransaccionesPorCategoria(idCategoria: Int): Int =
+        finanzasDao.contarTransaccionesPorCategoria(idCategoria)
+
     // ── Cálculos ──────────────────────────────────────────────────────────────
 
-    fun calcularSaldoRestante(presupuestoMeta: Double, transacciones: List<Transaccion>): Double {
-        var saldo = presupuestoMeta
+    fun calcularSaldoRestante(meta: Double, transacciones: List<Transaccion>): Double {
+        var saldo = meta
         for (t in transacciones) {
             if (!t.esta_borrada) {
                 if (t.tipo_transaccion == "Gasto")   saldo -= t.monto
@@ -73,15 +71,12 @@ class FinanzasRepositorio(private val finanzasDao: FinanzasDao) {
         finanzasDao.eliminarTodasLasTransacciones()
     }
 
-    // Para el merge en SyncManager — lee todos los presupuestos en un momento puntual
     suspend fun obtenerTodasLasFinanzasSuspend(): List<PresupuestoSemanal> =
         finanzasDao.obtenerTodasLasFinanzasSuspend()
 
-    // Para el merge en SyncManager — lee todas las transacciones (incluyendo borradas)
     suspend fun obtenerTodasLasTransacciones(): List<Transaccion> =
         finanzasDao.obtenerTodasLasTransaccionesSuspend()
 
-    // Inserción masiva para el merge — REPLACE por id no duplica
     suspend fun restaurarDatosFinanzas(lista: List<PresupuestoSemanal>) =
         lista.forEach { finanzasDao.insertarPresupuesto(it) }
 
