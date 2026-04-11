@@ -37,7 +37,6 @@ class PerfilViewModel(
         calcularPorcentajeTareas()
         calcularPorcentajeAsistencia()
 
-        // Puente SyncManager → LiveData
         viewModelScope.launch {
             SyncManager.estaCargando.collect { cargando ->
                 estaCargandoRespaldo.postValue(cargando)
@@ -49,7 +48,6 @@ class PerfilViewModel(
             }
         }
 
-        // Verificar sesión DESPUÉS de suscribir los colectores
         verificarSesion()
     }
 
@@ -88,7 +86,6 @@ class PerfilViewModel(
 
         if (user != null) {
             correoUsuario.value = user.email
-            // SyncManager.listo() garantiza que init() ya fue llamado antes de esto
             SyncManager.onSesionActiva(user.uid)
         } else {
             SyncManager.onCerrarSesion()
@@ -109,6 +106,21 @@ class PerfilViewModel(
         SyncManager.onCerrarSesion()
         FirebaseAuth.getInstance().signOut()
         verificarSesion()
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // GOOGLE SIGN-IN — Métodos nuevos
+    // ─────────────────────────────────────────────────────────────────────────
+
+    fun vincularCuentaGoogle(nombre: String, apellido: String) {
+        actualizarNombreInmediato(nombre, apellido)
+        SyncManager.onNuevaCuentaVinculada(nombre, apellido)
+    }
+
+    fun iniciarSesionGoogle(nombre: String, apellido: String) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        actualizarNombreInmediato(nombre, apellido)
+        SyncManager.onInicioSesion(uid, nombre, apellido)
     }
 
     // ─────────────────────────────────────────────────────────────────────────

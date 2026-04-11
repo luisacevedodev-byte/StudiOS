@@ -1,5 +1,6 @@
 package com.luixard.studios.interfaz.perfil
 
+import android.app.Activity
 import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
@@ -8,9 +9,14 @@ import android.os.Handler
 import android.os.Looper
 import android.view.*
 import android.widget.*
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import com.google.android.gms.auth.api.signin.GoogleSignIn
+import com.google.android.gms.auth.api.signin.GoogleSignInAccount
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -18,6 +24,7 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
+import com.google.firebase.auth.GoogleAuthProvider
 import com.luixard.studios.AplicacionStudiOS
 import com.luixard.studios.R
 import com.luixard.studios.datos.sync.SyncManager
@@ -45,9 +52,27 @@ class PerfilFragment : Fragment() {
         )
     }
 
-
     private val PREFS_NAME         = "StudiosPrefs"
     private val KEY_NOMBRE_USUARIO = "nombre_usuario"
+
+    // ── Google Sign-In: indica si estamos vinculando (true) o iniciando sesión (false) ──
+    private var esVincularGoogle = false
+
+    // ── Launcher para el resultado de Google Sign-In ─────────────────────────
+    // IMPORTANTE: Debe registrarse ANTES de onCreateView.
+    private val googleSignInLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
+            try {
+                val account = task.getResult(ApiException::class.java)!!
+                autenticarConFirebase(account)
+            } catch (e: ApiException) {
+                MensajesUI.error(requireActivity(), "Error con Google Sign-In (código ${e.statusCode})")
+            }
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -65,7 +90,6 @@ class PerfilFragment : Fragment() {
         cardCerrarSesion  = view.findViewById(R.id.cardCerrarSesion)
         layoutCargando    = view.findViewById(R.id.layoutCargandoRespaldo)
         val btnEditarNombre = view.findViewById<ImageButton>(R.id.btnEditarNombre)
-
 
         cargarNombreUsuario()
         setupObservers()
@@ -85,12 +109,10 @@ class PerfilFragment : Fragment() {
             SyncManager.loginCompletado.collect { completado ->
                 if (completado) {
                     viewModel.verificarSesion()
-                    // Resetear para el próximo login
                     SyncManager.loginCompletado.value = false
                 }
             }
         }
-
 
         viewModel.verificarSesion()
     }
@@ -109,7 +131,6 @@ class PerfilFragment : Fragment() {
             .getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
             .edit().putString(KEY_NOMBRE_USUARIO, nombre).apply()
     }
-
 
     private fun mostrarDialogoEditarNombre() {
         val nombreActual = tvNombreUsuario.text.toString().trim()
@@ -191,11 +212,72 @@ class PerfilFragment : Fragment() {
 
         view.findViewById<ImageButton>(R.id.btnCerrarDialogo)?.setOnClickListener { dialog.dismiss() }
         view.findViewById<TextView>(R.id.tvTituloVincular)?.text = titulo
+
+        // Botón de correo (ya existente)
         view.findViewById<MaterialButton>(R.id.btnCorreo).setOnClickListener {
             dialog.dismiss()
             if (titulo == "Iniciar Sesión") mostrarDialogoLogin() else mostrarDialogoRegistro()
         }
+
+        // ── NUEVO: Botón de Google ────────────────────────────────────────────
+        // Asegúrate de añadir un MaterialButton con id="btnGoogle" en
+        // res/layout/dialogo_opciones_vincular.xml con texto "Continuar con Google"
+        view.findViewById<MaterialButton>(R.id.btnGoogle)?.setOnClickListener {
+            dialog.dismiss()
+            esVincularGoogle = (titulo == "Vincular Cuenta")
+            iniciarSesionConGoogle()
+        }
+
         dialog.show()
+    }
+
+    // ── GOOGLE SIGN-IN ────────────────────────────────────────────────────────
+
+    private fun iniciarSesionConGoogle() {
+        val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+            .requestIdToken(getString(R.string.default_web_client_id))
+            .requestEmail()
+            .requestProfile()  // Para obtener nombre y apellido
+            .build()
+
+        val googleSignInClient = GoogleSignIn.getClient(requireContext(), gso)
+        googleSignInClient.signOut().addOnCompleteListener {
+            googleSignInLauncher.launch(googleSignInClient.signInIntent)
+        }
+    }
+
+    private fun autenticarConFirebase(account: GoogleSignInAccount) {
+        val credential = GoogleAuthProvider.getCredential(account.idToken, null)
+
+        FirebaseAuth.getInstance().signInWithCredential(credential)
+            .addOnSuccessListener { result ->
+                // Extraer nombre y apellido del perfil de Google
+                val nombre   = account.givenName  ?: ""    // Primer nombre
+                val apellido = account.familyName ?: ""    // Apellido(s)
+                val correo   = account.email      ?: ""
+
+                guardarNombreUsuario("$nombre $apellido".trim())
+                tvNombreUsuario.text = "$nombre $apellido".trim()
+                if (correo.isNotEmpty()) tvEmailSubtitulo.text = correo
+
+                if (esVincularGoogle || result.additionalUserInfo?.isNewUser == true) {
+                    // Primera vez: subir datos locales a la nube
+                    viewModel.vincularCuentaGoogle(nombre, apellido)
+                    MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con Google!")
+                } else {
+                    // Ya tenía cuenta: descargar y fusionar datos de la nube
+                    viewModel.iniciarSesionGoogle(nombre, apellido)
+                    MensajesUI.exito(requireActivity(), "¡Bienvenido de nuevo, $nombre!")
+                }
+            }
+            .addOnFailureListener { e ->
+                val msg = when {
+                    e.message?.contains("account-exists-with-different-credential") == true ->
+                        "Ya existe una cuenta con ese correo. Intenta con correo y contraseña."
+                    else -> "Error al autenticar con Google: ${e.message}"
+                }
+                MensajesUI.error(requireActivity(), msg)
+            }
     }
 
     // ── REGISTRO ──────────────────────────────────────────────────────────────
@@ -270,8 +352,6 @@ class PerfilFragment : Fragment() {
                 .addOnSuccessListener {
                     guardarNombreUsuario("$nom $ape".trim())
                     viewModel.actualizarNombreInmediato(nom, ape)
-                    // ✅ onNuevaCuentaVinculada emitirá loginCompletado cuando termine.
-                    // El collector de arriba llamará verificarSesion() en ese momento.
                     SyncManager.onNuevaCuentaVinculada(nom, ape)
                     dialog.dismiss()
                     MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con éxito!")
@@ -346,7 +426,7 @@ class PerfilFragment : Fragment() {
         dialog.show()
     }
 
-    // ── RECUPERAR CONTRASEÑA — PASO 1: correo ────────────────────────────────
+    // ── RECUPERAR CONTRASEÑA ─────────────────────────────────────────────────
 
     private fun mostrarDialogoRecuperarPassword() {
         val view = LayoutInflater.from(requireContext())
@@ -370,8 +450,6 @@ class PerfilFragment : Fragment() {
         }
         dialog.show()
     }
-
-    // ── RECUPERAR CONTRASEÑA — PASO 2: verificar código ──────────────────────
 
     private fun mostrarDialogoVerificacionRecuperacion(cor: String) {
         val view = LayoutInflater.from(requireContext())
