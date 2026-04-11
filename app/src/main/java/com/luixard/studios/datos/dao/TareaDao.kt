@@ -12,7 +12,6 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TareaDao {
 
-    // Añadir nueva tarea
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarTarea(tarea: Tarea)
 
@@ -22,11 +21,9 @@ interface TareaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarListaTareas(tareas: List<Tarea>)
 
-    // Editar tarea existente
     @Update
     suspend fun actualizarTarea(tarea: Tarea)
 
-    // Eliminar permanentemente de la base de datos
     @Delete
     suspend fun eliminarTareaPermanente(tarea: Tarea)
 
@@ -36,39 +33,42 @@ interface TareaDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun restaurarTareasMasivo(tareas: List<Tarea>)
 
-    // ---------------- LECTURA DE DATOS  ----------------
+    // ── Lectura ───────────────────────────────────────────────────────────────
 
-    // Mostrar tareas pendientes (no completadas y no en papelera), ordenadas por fecha más próxima
     @Query("SELECT * FROM tareas WHERE es_completada = 0 AND esta_borrada = 0 ORDER BY fecha_entrega ASC")
     fun obtenerTareasPendientes(): Flow<List<Tarea>>
 
-    // Mostrar tareas completadas (Historial)
     @Query("SELECT * FROM tareas WHERE es_completada = 1 AND esta_borrada = 0 ORDER BY fecha_entrega DESC")
     fun obtenerTareasCompletadas(): Flow<List<Tarea>>
 
-    // Mostrar tareas borradas (Papelera)
     @Query("SELECT * FROM tareas WHERE esta_borrada = 1 ORDER BY fecha_entrega DESC")
     fun obtenerTareasBorradas(): Flow<List<Tarea>>
 
-    // Marcar una tarea como completada
-    @Query("UPDATE tareas SET es_completada = 1 WHERE id_tarea = :id")
-    suspend fun marcarComoCompletada(id: Int)
+    @Query("SELECT * FROM tareas")
+    fun obtenerTodasLasTareas(): Flow<List<Tarea>>
 
-    // Borrado lógico (Mandar a papelera)
-    @Query("UPDATE tareas SET esta_borrada = 1 WHERE id_tarea = :id")
-    suspend fun mandarAPapelera(id: Int)
+    // Para el merge — devuelve TODAS incluyendo borradas
+    @Query("SELECT * FROM tareas")
+    suspend fun obtenerTodasSuspend(): List<Tarea>
 
-    // Restaurar una tarea (Quitarla de completada o de la papelera)
-    @Query("UPDATE tareas SET es_completada = 0, esta_borrada = 0 WHERE id_tarea = :id")
-    suspend fun restaurarTarea(id: Int)
+    // ── Cambios de estado — actualizan updated_at para que el merge los detecte
+
+    @Query("UPDATE tareas SET es_completada = 1, updated_at = :ts WHERE id_tarea = :id")
+    suspend fun marcarComoCompletada(id: Int, ts: Long = System.currentTimeMillis())
+
+    // Borrado lógico: marca esta_borrada Y actualiza el timestamp
+    @Query("UPDATE tareas SET esta_borrada = 1, updated_at = :ts WHERE id_tarea = :id")
+    suspend fun mandarAPapelera(id: Int, ts: Long = System.currentTimeMillis())
+
+    // Restaurar: quita completada y borrada, actualiza timestamp
+    @Query("UPDATE tareas SET es_completada = 0, esta_borrada = 0, updated_at = :ts WHERE id_tarea = :id")
+    suspend fun restaurarTarea(id: Int, ts: Long = System.currentTimeMillis())
+
+    // ── Conteos ───────────────────────────────────────────────────────────────
 
     @Query("SELECT COUNT(*) FROM tareas")
-    fun contarTareasTotales(): kotlinx.coroutines.flow.Flow<Int>
+    fun contarTareasTotales(): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM tareas WHERE es_completada = 1")
-    fun contarTareasCompletadas(): kotlinx.coroutines.flow.Flow<Int>
-
-    // En TareaDao.kt
-    @Query("SELECT * FROM tareas") // "tareas" debe ser el nombre de tu tabla en @Entity
-    fun obtenerTodasLasTareas(): kotlinx.coroutines.flow.Flow<List<Tarea>>
+    fun contarTareasCompletadas(): Flow<Int>
 }

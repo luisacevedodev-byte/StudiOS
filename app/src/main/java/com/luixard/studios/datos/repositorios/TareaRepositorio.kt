@@ -20,6 +20,8 @@ class TareaRepositorio(private val tareaDao: TareaDao) {
     suspend fun completarTarea(id: Int) = tareaDao.marcarComoCompletada(id)
     suspend fun restaurarTarea(id: Int) = tareaDao.restaurarTarea(id)
 
+    suspend fun obtenerTodas(): List<Tarea> = tareaDao.obtenerTodasSuspend()
+
     suspend fun restaurarTareasMasivo(tareas: List<Tarea>) = tareaDao.insertarListaTareas(tareas)
 
     suspend fun insertarListaTareas(lista: List<Tarea>) = tareaDao.insertarLista(lista)

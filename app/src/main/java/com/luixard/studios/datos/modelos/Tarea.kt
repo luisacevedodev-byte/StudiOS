@@ -1,7 +1,9 @@
 package com.luixard.studios.datos.modelos
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.util.UUID
 
 @Entity(tableName = "tareas")
 data class Tarea(
@@ -9,18 +11,17 @@ data class Tarea(
     val id_tarea: Int = 0,
 
     val titulo_tarea: String,
-
     val descripcion_tarea: String?,
+    val fecha_entrega: String,           // "YYYY-MM-DD"
+    val id_prioridad: String,            // "ALTA", "MEDIA", "BAJA"
+    val id_materia: Int?,
+    val es_completada: Boolean = false,
+    val esta_borrada: Boolean = false,
+    val fecha_creacion: Long = System.currentTimeMillis(),
 
-    val fecha_entrega: String, // formato "YYYY-MM-DD"
+    @ColumnInfo(name = "sync_id")
+    val syncId: String = UUID.randomUUID().toString(),
 
-    val id_prioridad: String, // Aquí se guarda "ALTA", "MEDIA" o "BAJA"
-
-    val id_materia: Int?, // Opcional, por si la tarea no tiene materia asignada
-
-    val es_completada: Boolean = false, // Por defecto al crearla, no está completada
-
-    val esta_borrada: Boolean = false, // Para la papelera (RF08)
-
-    val fecha_creacion: Long = System.currentTimeMillis() // Guarda el momento exacto en que se creó
+    @ColumnInfo(name = "updated_at")
+    val updatedAt: Long = System.currentTimeMillis()
 )
