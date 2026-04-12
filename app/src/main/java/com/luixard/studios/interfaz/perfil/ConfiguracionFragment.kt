@@ -19,8 +19,6 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import com.google.android.material.button.MaterialButton
@@ -28,6 +26,7 @@ import com.google.android.material.chip.ChipGroup
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.luixard.studios.R
+import com.luixard.studios.notificaciones.ServicioNotificacionFija
 import com.luixard.studios.notificaciones.WorkerNotificacionFija
 import com.luixard.studios.notificaciones.WorkerRecordatorio
 import java.util.Calendar
@@ -99,12 +98,14 @@ class ConfiguracionFragment : Fragment() {
     private fun cargarPreferencias() {
         val p = prefs()
 
+        // ── Tema ──────────────────────────────────────────────────────────────
         when (p.getString(KEY_TEMA, TEMA_SISTEMA)) {
             TEMA_CLARO  -> marcarTema(radioTemaClaro)
             TEMA_OSCURO -> marcarTema(radioTemaOscuro)
             else        -> marcarTema(radioTemaSistema)
         }
 
+        // ── Notificación fija ─────────────────────────────────────────────────
         val notifFijaActiva = p.getBoolean(KEY_NOTIF_FIJA, false)
         switchNotifFija.isChecked      = notifFijaActiva
         layoutHoraNotifFija.visibility = if (notifFijaActiva) View.VISIBLE else View.GONE
@@ -112,11 +113,14 @@ class ConfiguracionFragment : Fragment() {
         val horaGuardada = p.getString(KEY_HORA_FIJA, "12:00") ?: "12:00"
         btnSeleccionarHoraFija.text = formatearHora12(horaGuardada)
 
+        // ── Recordatorios ─────────────────────────────────────────────────────
         val recActivo = p.getBoolean(KEY_REC_ACTIVO, false)
         switchRecordatorios.isChecked  = recActivo
         layoutFrecuenciaRec.visibility = if (recActivo) View.VISIBLE else View.GONE
 
         when (p.getInt(KEY_REC_HORAS, 8)) {
+            1    -> chipGroupFrecuencia.check(R.id.chip1h)
+            2    -> chipGroupFrecuencia.check(R.id.chip2h)
             4    -> chipGroupFrecuencia.check(R.id.chip4h)
             12   -> chipGroupFrecuencia.check(R.id.chip12h)
             24   -> chipGroupFrecuencia.check(R.id.chip24h)
@@ -147,7 +151,12 @@ class ConfiguracionFragment : Fragment() {
             }
             prefs().edit().putBoolean(KEY_NOTIF_FIJA, isChecked).apply()
             layoutHoraNotifFija.visibility = if (isChecked) View.VISIBLE else View.GONE
-            if (isChecked) programarWorkerFijo() else cancelarWorker(WORKER_FIJA)
+
+            if (isChecked) {
+                programarWorkerFijo()
+            } else {
+                cancelarWorkerFijo()
+            }
         }
 
         // ── Botón hora ────────────────────────────────────────────────────────
@@ -156,11 +165,15 @@ class ConfiguracionFragment : Fragment() {
             val partes = horaActual.split(":")
             val h = partes.getOrNull(0)?.toIntOrNull() ?: 12
             val m = partes.getOrNull(1)?.toIntOrNull() ?: 0
+
             TimePickerDialog(requireContext(), { _, hora, minuto ->
+                // Guardar la nueva hora elegida
                 val horaStr = "%02d:%02d".format(hora, minuto)
                 prefs().edit().putString(KEY_HORA_FIJA, horaStr).apply()
                 btnSeleccionarHoraFija.text = formatearHora12(horaStr)
+
                 if (switchNotifFija.isChecked) programarWorkerFijo()
+
             }, h, m, false).show()
         }
 
@@ -176,9 +189,10 @@ class ConfiguracionFragment : Fragment() {
             if (isChecked) programarWorkerRecordatorio() else cancelarWorker(WORKER_REC)
         }
 
-        // ── Chips frecuencia ──────────────────────────────────────────────────
         chipGroupFrecuencia.setOnCheckedStateChangeListener { _, checkedIds ->
             val horas = when (checkedIds.firstOrNull()) {
+                R.id.chip1h  -> 1
+                R.id.chip2h  -> 2
                 R.id.chip4h  -> 4
                 R.id.chip12h -> 12
                 R.id.chip24h -> 24
@@ -249,6 +263,7 @@ class ConfiguracionFragment : Fragment() {
     // ── Workers ───────────────────────────────────────────────────────────────
 
     private fun programarWorkerFijo() {
+        val ctx     = requireContext()
         val horaStr = prefs().getString(KEY_HORA_FIJA, "12:00") ?: "12:00"
         val partes  = horaStr.split(":")
         val horaObj = partes.getOrNull(0)?.toIntOrNull() ?: 12
@@ -261,16 +276,26 @@ class ConfiguracionFragment : Fragment() {
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }
+        // Si la hora configurada ya pasó hoy, programar para mañana
         if (!destino.after(ahora)) destino.add(Calendar.DAY_OF_YEAR, 1)
 
-        val delayMins = TimeUnit.MILLISECONDS.toMinutes(destino.timeInMillis - ahora.timeInMillis)
+        val delayMs = destino.timeInMillis - ahora.timeInMillis
 
-        val request = OneTimeWorkRequestBuilder<WorkerNotificacionFija>()
-            .setInitialDelay(delayMins, TimeUnit.MINUTES)
+        val request = PeriodicWorkRequestBuilder<WorkerNotificacionFija>(24, TimeUnit.HOURS)
+            .setInitialDelay(delayMs, TimeUnit.MILLISECONDS)
             .build()
 
-        WorkManager.getInstance(requireContext())
-            .enqueueUniqueWork(WORKER_FIJA, ExistingWorkPolicy.REPLACE, request)
+        WorkManager.getInstance(ctx).enqueueUniquePeriodicWork(
+            WORKER_FIJA,
+            ExistingPeriodicWorkPolicy.REPLACE,
+            request
+        )
+    }
+
+    private fun cancelarWorkerFijo() {
+        val ctx = requireContext()
+        WorkManager.getInstance(ctx).cancelUniqueWork(WORKER_FIJA)
+        ServicioNotificacionFija.detener(ctx)
     }
 
     private fun programarWorkerRecordatorio() {

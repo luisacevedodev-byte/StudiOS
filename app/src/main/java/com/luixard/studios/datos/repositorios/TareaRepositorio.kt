@@ -28,5 +28,7 @@ class TareaRepositorio(private val tareaDao: TareaDao) {
 
     // Limpia toda la tabla antes de restaurar desde la nube
     suspend fun eliminarTodas() = tareaDao.eliminarTodas()
+
+
 }
  

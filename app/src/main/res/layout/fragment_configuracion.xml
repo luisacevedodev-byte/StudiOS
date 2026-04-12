@@ -24,6 +24,10 @@
             android:shadowRadius="15"
             android:layout_marginBottom="20dp" />
 
+        <!-- ══════════════════════════════════════════════════ -->
+        <!--  SECCIÓN: NOTIFICACIONES                          -->
+        <!-- ══════════════════════════════════════════════════ -->
+
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -35,6 +39,7 @@
             android:layout_marginBottom="10dp"
             android:layout_marginStart="4dp" />
 
+        <!-- Card: Permiso del sistema -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -96,7 +101,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-
+        <!-- Card: Notificación Fija Diaria -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -148,14 +153,16 @@
                             android:layout_marginTop="2dp" />
                     </LinearLayout>
 
+                    <!-- Switch con colores visibles en modo oscuro y claro -->
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchNotifFija"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:thumbTint="@color/studios_cyan_titulo"
-                        app:trackTint="@color/fondo_item_seleccionado" />
+                        app:thumbTint="@color/switch_thumb_selector"
+                        app:trackTint="@color/switch_track_selector" />
                 </LinearLayout>
 
+                <!-- Selector de hora -->
                 <LinearLayout
                     android:id="@+id/layoutHoraNotifFija"
                     android:layout_width="match_parent"
@@ -178,7 +185,6 @@
                         android:textSize="13sp"
                         android:layout_marginStart="16dp" />
 
-                    <!-- Botón selector de hora -->
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnSeleccionarHoraFija"
                         android:layout_width="wrap_content"
@@ -196,6 +202,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+        <!-- Card: Recordatorios Aleatorios -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -247,14 +254,16 @@
                             android:layout_marginTop="2dp" />
                     </LinearLayout>
 
+                    <!-- Switch con colores visibles en modo oscuro y claro -->
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchRecordatorios"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        app:thumbTint="@color/studios_cyan_titulo"
-                        app:trackTint="@color/fondo_item_seleccionado" />
+                        app:thumbTint="@color/switch_thumb_selector"
+                        app:trackTint="@color/switch_track_selector" />
                 </LinearLayout>
 
+                <!-- Chips de frecuencia -->
                 <LinearLayout
                     android:id="@+id/layoutFrecuenciaRecordatorio"
                     android:layout_width="match_parent"
@@ -272,7 +281,6 @@
                         android:layout_marginBottom="10dp"
                         android:layout_marginStart="44dp" />
 
-                    <!-- Chips de frecuencia -->
                     <com.google.android.material.chip.ChipGroup
                         android:id="@+id/chipGroupFrecuencia"
                         android:layout_width="match_parent"
@@ -280,6 +288,28 @@
                         android:layout_marginStart="44dp"
                         app:singleSelection="true"
                         app:selectionRequired="true">
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip1h"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Cada 1h"
+                            android:textSize="12sp"
+                            style="@style/Widget.MaterialComponents.Chip.Choice"
+                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
+                            app:checkedIconTint="@color/studios_cyan_titulo"
+                            android:textColor="?attr/colorOnSurface" />
+
+                        <com.google.android.material.chip.Chip
+                            android:id="@+id/chip2h"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Cada 2h"
+                            android:textSize="12sp"
+                            style="@style/Widget.MaterialComponents.Chip.Choice"
+                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
+                            app:checkedIconTint="@color/studios_cyan_titulo"
+                            android:textColor="?attr/colorOnSurface" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip4h"
@@ -330,6 +360,10 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- ══════════════════════════════════════════════════ -->
+        <!--  SECCIÓN: APARIENCIA                              -->
+        <!-- ══════════════════════════════════════════════════ -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -477,6 +511,10 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- ══════════════════════════════════════════════════ -->
+        <!--  SECCIÓN: ACERCA DE                               -->
+        <!-- ══════════════════════════════════════════════════ -->
 
         <TextView
             android:layout_width="wrap_content"

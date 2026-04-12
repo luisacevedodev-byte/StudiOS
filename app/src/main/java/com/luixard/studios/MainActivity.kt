@@ -1,5 +1,6 @@
 package com.luixard.studios
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.widget.ImageView
@@ -16,6 +17,7 @@ import com.luixard.studios.interfaz.tareas.ListaTareasFragment
 import com.luixard.studios.interfaz.inicio.DashboardFragment
 import com.luixard.studios.interfaz.perfil.PerfilFragment
 import com.luixard.studios.interfaz.perfil.ConfiguracionFragment
+import com.luixard.studios.interfaz.notificaciones.RegistrarAvanceDialogFragment
 import android.widget.Toast
 import com.luixard.studios.datos.sync.SyncManager
 
@@ -47,7 +49,6 @@ class MainActivity : AppCompatActivity() {
         val optTareas       = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
         val optFinanzas     = customDrawerView.findViewById<LinearLayout>(R.id.nav_finanzas_item)
         val optNotas        = customDrawerView.findViewById<LinearLayout>(R.id.nav_notas_item)
-        // ── NUEVO: referencia al item de Configuración ──────────────────────
         val optAjustes      = customDrawerView.findViewById<LinearLayout>(R.id.nav_ajustes_item)
 
         // Solo los items principales participan en el resaltado azul del menú
@@ -139,7 +140,34 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_LONG).show()
             }
         }
+
+        // Manejar apertura desde notificación (CU-02)
+        manejarIntentDeNotificacion(intent)
     }
+
+    // ── Abrir app desde notificación ──────────────────────────────────────
+    private fun manejarIntentDeNotificacion(intent: Intent?) {
+        when (intent?.getStringExtra("destino")) {
+            "registrar_avance" -> {
+                RegistrarAvanceDialogFragment.newInstance()
+                    .show(supportFragmentManager, "registrar_avance")
+                intent.removeExtra("destino")
+            }
+            "tareas" -> {
+                val item = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
+                cargarFragmento(ListaTareasFragment(), item)
+                intent.removeExtra("destino")
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        manejarIntentDeNotificacion(intent)
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
 
     private fun cargarFragmento(fragmento: Fragment, itemSeleccionado: LinearLayout) {
         supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)

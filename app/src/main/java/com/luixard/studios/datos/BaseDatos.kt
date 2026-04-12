@@ -27,7 +27,8 @@ import kotlinx.coroutines.launch
         CategoriaGasto::class,
         Nota::class,
         Usuario::class,
-        HistorialAvanceTarea::class
+        HistorialAvanceTarea::class,
+        RegistroActividad::class
     ],
     version = 12,
     exportSchema = false
@@ -57,9 +58,6 @@ abstract class BaseDatos : RoomDatabase() {
             }
         }
 
-        // ── Migración 11 → 12 ─────────────────────────────────────────────────
-        // Agrega sync_id (UUID por dispositivo) y esta_borrada en nota/transaccion
-        // LOWER(HEX(RANDOMBLOB(16))) genera un UUID aleatorio directamente en SQLite
         private val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 // sync_id para cada tabla
@@ -80,6 +78,19 @@ abstract class BaseDatos : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `registro_actividad_diaria` (" +
+                            "`id_actividad` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                            "`id_tarea` INTEGER NOT NULL, " +
+                            "`nota` TEXT, " +
+                            "`fecha_registro` INTEGER NOT NULL, " +
+                            "`tipo` TEXT NOT NULL)"
+                )
+            }
+        }
+
         fun getDatabase(context: Context): BaseDatos {
             return INSTANCIA ?: synchronized(this) {
                 val instancia = Room.databaseBuilder(
@@ -87,7 +98,7 @@ abstract class BaseDatos : RoomDatabase() {
                     BaseDatos::class.java,
                     "studios_db"
                 )
-                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12)
+                    .addMigrations(MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
                     .addCallback(object : Callback() {
                         override fun onCreate(db: SupportSQLiteDatabase) {
                             super.onCreate(db)

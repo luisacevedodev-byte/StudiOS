@@ -7,10 +7,14 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.luixard.studios.datos.modelos.Tarea
+import com.luixard.studios.datos.modelos.HistorialAvanceTarea
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface TareaDao {
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarAvanceTarea(avance: HistorialAvanceTarea)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertarTarea(tarea: Tarea)

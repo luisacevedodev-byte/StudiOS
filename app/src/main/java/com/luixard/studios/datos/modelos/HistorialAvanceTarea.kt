@@ -11,3 +11,4 @@ data class HistorialAvanceTarea(
     val fecha_hora_registro: Date, // Esta es la columna que busca el DAO
     val nota_avance: String? = null
 )
+

@@ -6,6 +6,10 @@ import androidx.work.WorkerParameters
 import com.luixard.studios.AplicacionStudiOS
 import kotlinx.coroutines.flow.first
 
+/**
+ * Worker diario que verifica si hay tareas pendientes y, si las hay,
+ * INICIA el ServicioNotificacionFija.
+ */
 class WorkerNotificacionFija(
     private val context: Context,
     params:              WorkerParameters
@@ -19,10 +23,7 @@ class WorkerNotificacionFija(
             val totalPendientes = app.repositorioTareas.tareasPendientes.first().size
 
             if (totalPendientes > 0) {
-                HelperNotificaciones.crearCanales(context)
-
-                val notif = HelperNotificaciones.construirNotifFija(context, totalPendientes)
-                HelperNotificaciones.mostrar(context, HelperNotificaciones.ID_NOTIF_FIJA, notif)
+                ServicioNotificacionFija.iniciar(context)
             }
 
             Result.success()

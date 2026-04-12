@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.luixard.studios.datos.modelos.HistorialAvanceTarea
+import com.luixard.studios.datos.modelos.RegistroActividad
 import kotlinx.coroutines.flow.Flow
 import java.util.Date
 
@@ -22,4 +23,7 @@ interface RegistroActividadDao {
     // Opcional: Obtener todo el historial si en el futuro quieres hacer una lista de actividad
     @Query("SELECT * FROM historial_avance_tareas ORDER BY fecha_hora_registro DESC")
     fun obtenerTodoElHistorial(): Flow<List<HistorialAvanceTarea>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertarRegistro(registro: RegistroActividad)
 }

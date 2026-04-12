@@ -13,8 +13,7 @@ class ReceptorAccionNotif : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             ACCION_SIN_AVANCE -> {
-                // El usuario indicó que no hubo avances → cancelar la notificación fija
-                HelperNotificaciones.cancelar(context, HelperNotificaciones.ID_NOTIF_FIJA)
+                ServicioNotificacionFija.detener(context)
             }
         }
     }
