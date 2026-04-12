@@ -24,10 +24,6 @@
             android:shadowRadius="15"
             android:layout_marginBottom="20dp" />
 
-        <!-- ══════════════════════════════════════════════════ -->
-        <!--  SECCIÓN: NOTIFICACIONES                          -->
-        <!-- ══════════════════════════════════════════════════ -->
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -153,7 +149,6 @@
                             android:layout_marginTop="2dp" />
                     </LinearLayout>
 
-                    <!-- Switch con colores visibles en modo oscuro y claro -->
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchNotifFija"
                         android:layout_width="wrap_content"
@@ -202,7 +197,6 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Card: Recordatorios Aleatorios -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -254,7 +248,6 @@
                             android:layout_marginTop="2dp" />
                     </LinearLayout>
 
-                    <!-- Switch con colores visibles en modo oscuro y claro -->
                     <com.google.android.material.switchmaterial.SwitchMaterial
                         android:id="@+id/switchRecordatorios"
                         android:layout_width="wrap_content"
@@ -296,9 +289,9 @@
                             android:text="Cada 1h"
                             android:textSize="12sp"
                             style="@style/Widget.MaterialComponents.Chip.Choice"
-                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
-                            app:checkedIconTint="@color/studios_cyan_titulo"
-                            android:textColor="?attr/colorOnSurface" />
+                            app:chipStrokeColor="@color/studios_cyan_titulo"
+                            app:chipStrokeWidth="1dp"
+                            app:checkedIconTint="@color/studios_cyan_titulo" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip2h"
@@ -307,9 +300,9 @@
                             android:text="Cada 2h"
                             android:textSize="12sp"
                             style="@style/Widget.MaterialComponents.Chip.Choice"
-                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
-                            app:checkedIconTint="@color/studios_cyan_titulo"
-                            android:textColor="?attr/colorOnSurface" />
+                            app:chipStrokeColor="@color/studios_cyan_titulo"
+                            app:chipStrokeWidth="1dp"
+                            app:checkedIconTint="@color/studios_cyan_titulo" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip4h"
@@ -318,9 +311,9 @@
                             android:text="Cada 4h"
                             android:textSize="12sp"
                             style="@style/Widget.MaterialComponents.Chip.Choice"
-                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
-                            app:checkedIconTint="@color/studios_cyan_titulo"
-                            android:textColor="?attr/colorOnSurface" />
+                            app:chipStrokeColor="@color/studios_cyan_titulo"
+                            app:chipStrokeWidth="1dp"
+                            app:checkedIconTint="@color/studios_cyan_titulo" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip8h"
@@ -330,9 +323,9 @@
                             android:textSize="12sp"
                             android:checked="true"
                             style="@style/Widget.MaterialComponents.Chip.Choice"
-                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
-                            app:checkedIconTint="@color/studios_cyan_titulo"
-                            android:textColor="?attr/colorOnSurface" />
+                            app:chipStrokeColor="@color/studios_cyan_titulo"
+                            app:chipStrokeWidth="1dp"
+                            app:checkedIconTint="@color/studios_cyan_titulo" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip12h"
@@ -341,9 +334,9 @@
                             android:text="Cada 12h"
                             android:textSize="12sp"
                             style="@style/Widget.MaterialComponents.Chip.Choice"
-                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
-                            app:checkedIconTint="@color/studios_cyan_titulo"
-                            android:textColor="?attr/colorOnSurface" />
+                            app:chipStrokeColor="@color/studios_cyan_titulo"
+                            app:chipStrokeWidth="1dp"
+                            app:checkedIconTint="@color/studios_cyan_titulo" />
 
                         <com.google.android.material.chip.Chip
                             android:id="@+id/chip24h"
@@ -352,18 +345,15 @@
                             android:text="Cada 24h"
                             android:textSize="12sp"
                             style="@style/Widget.MaterialComponents.Chip.Choice"
-                            app:chipBackgroundColor="@color/fondo_item_seleccionado"
-                            app:checkedIconTint="@color/studios_cyan_titulo"
-                            android:textColor="?attr/colorOnSurface" />
+                            app:chipStrokeColor="@color/studios_cyan_titulo"
+                            app:chipStrokeWidth="1dp"
+                            app:checkedIconTint="@color/studios_cyan_titulo" />
+
                     </com.google.android.material.chip.ChipGroup>
                 </LinearLayout>
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <!-- ══════════════════════════════════════════════════ -->
-        <!--  SECCIÓN: APARIENCIA                              -->
-        <!-- ══════════════════════════════════════════════════ -->
 
         <TextView
             android:layout_width="wrap_content"
@@ -511,11 +501,6 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <!-- ══════════════════════════════════════════════════ -->
-        <!--  SECCIÓN: ACERCA DE                               -->
-        <!-- ══════════════════════════════════════════════════ -->
-
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"

@@ -187,7 +187,6 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         }
-        // Permiso ya concedido (o no necesario en < Android 13): continuar con batería
         verificarBateriaConDialog(silencioso = false)
     }
 
@@ -205,18 +204,13 @@ class MainActivity : AppCompatActivity() {
     private fun verificarBateriaConDialog(silencioso: Boolean) {
         val pm = getSystemService(POWER_SERVICE) as PowerManager
         if (pm.isIgnoringBatteryOptimizations(packageName)) {
-            // Ya está exenta; no molestar al usuario
             return
         }
 
-        val miui = esMIUI()
-        val mensajeExtra = if (miui)
-            "\n\nEn dispositivos Xiaomi / POCO también ve a:\n" +
-                    "Ajustes › Aplicaciones › StudiOS › Autoarranque y actívalo.\n" +
-                    "Sin esto, MIUI puede bloquear las alarmas en segundo plano."
-        else ""
+        val esRestringido = esDispositivoRestringido()
+        val mensajeExtra  = obtenerMensajeExtraFabricante()
 
-        if (silencioso && !miui) return
+        if (silencioso && !esRestringido) return
 
         MaterialAlertDialogBuilder(this)
             .setTitle("Funcionar en segundo plano ⚙️")
@@ -240,6 +234,58 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Omitir", null)
             .show()
+    }
+
+    private fun esDispositivoRestringido(): Boolean {
+        val fabricante = android.os.Build.MANUFACTURER.lowercase()
+        return fabricante in listOf(
+            "xiaomi", "redmi", "poco",          // MIUI / HyperOS
+            "huawei", "honor",                  // EMUI / MagicUI
+            "samsung",                          // OneUI
+            "oneplus",                          // OxygenOS
+            "oppo", "realme",                   // ColorOS
+            "vivo",                             // OriginOS / Funtouch
+            "meizu",                            // Flyme
+            "zte", "nubia",                     // MyOS
+            "lenovo", "motorola"                // algunas versiones de Moto restringen alarmas
+        ) || esMIUI()
+    }
+
+    private fun obtenerMensajeExtraFabricante(): String {
+        val fabricante = android.os.Build.MANUFACTURER.lowercase()
+        return when {
+            fabricante in listOf("xiaomi", "redmi", "poco") || esMIUI() ->
+                "\n\nEn tu dispositivo Xiaomi / POCO / Redmi también ve a:\n" +
+                        "Ajustes › Aplicaciones › StudiOS › Autoarranque y actívalo.\n" +
+                        "Sin esto, MIUI/HyperOS puede bloquear las alarmas en segundo plano."
+
+            fabricante == "huawei" || fabricante == "honor" ->
+                "\n\nEn tu dispositivo Huawei / Honor también ve a:\n" +
+                        "Ajustes › Aplicaciones › StudiOS › Inicio de aplicación\n" +
+                        "y activa 'Gestión manual' con todas las opciones habilitadas."
+
+            fabricante == "samsung" ->
+                "\n\nEn tu dispositivo Samsung también ve a:\n" +
+                        "Ajustes › Batería › Uso de batería de la aplicación › StudiOS\n" +
+                        "y selecciona 'Sin restricciones'."
+
+            fabricante == "oneplus" ->
+                "\n\nEn tu dispositivo OnePlus también ve a:\n" +
+                        "Ajustes › Batería › Optimización de batería › StudiOS\n" +
+                        "y selecciona 'No optimizar'."
+
+            fabricante == "oppo" || fabricante == "realme" ->
+                "\n\nEn tu dispositivo OPPO / Realme también ve a:\n" +
+                        "Ajustes › Administración de apps › StudiOS\n" +
+                        "y activa 'Inicio automático'."
+
+            fabricante == "vivo" ->
+                "\n\nEn tu dispositivo Vivo también ve a:\n" +
+                        "iManager › Inicio automático de aplicaciones\n" +
+                        "y activa StudiOS."
+
+            else -> ""
+        }
     }
 
     private fun esMIUI(): Boolean = try {

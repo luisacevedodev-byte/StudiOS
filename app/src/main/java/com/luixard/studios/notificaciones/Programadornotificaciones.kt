@@ -8,21 +8,24 @@ import android.os.Build
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import java.util.Calendar
 import java.util.concurrent.TimeUnit
 
 object ProgramadorNotificaciones {
 
+    // ── Clave única para el worker de recordatorios ───────────────────────────
     private const val TAG_RECORDATORIO = "recordatorio_aleatorio"
 
-    private const val PREFS      = "studios_config"
-    private const val KEY_HORA   = "notif_fija_hora"
-    private const val KEY_MINUTO = "notif_fija_minuto"
-    private const val KEY_DESCARTADO = "notif_fija_descartada_hoy"
+    private const val PREFS          = "studios_config"
+    private const val KEY_DESCARTADO = "notif_fija_descartada_fecha"
 
-    // ─────────────────────────────────────────────────────────────────────
-    // NOTIFICACIÓN FIJA DIARIA — usa AlarmManager para disparo exacto
-    // ─────────────────────────────────────────────────────────────────────
+    private const val KEY_HORA   = "notif_fija_hora_int"
+    private const val KEY_MINUTO = "notif_fija_minuto_int"
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // NOTIFICACIÓN FIJA DIARIA — AlarmManager para disparo exacto
+    // ─────────────────────────────────────────────────────────────────────────
 
     fun programarNotifFija(context: Context, hora: Int, minuto: Int) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -41,6 +44,23 @@ object ProgramadorNotificaciones {
         } else {
             alarma.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, disparo, pending)
         }
+    }
+
+    fun confirmarYprogramarNotifFija(context: Context, hora: Int, minuto: Int) {
+        val horaFormato = String.format("%02d:%02d", hora, minuto)
+        MaterialAlertDialogBuilder(context)
+            .setTitle("Cambiar hora de notificación")
+            .setMessage(
+                "¿Confirmas cambiar el recordatorio diario a las $horaFormato?\n\n" +
+                        "Si ya cerraste la notificación de hoy, volverá a aparecer ahora " +
+                        "si tienes tareas pendientes."
+            )
+            .setPositiveButton("Sí, cambiar") { _, _ ->
+                programarNotifFija(context, hora, minuto)
+                ServicioNotificacionFija.iniciar(context)
+            }
+            .setNegativeButton("Cancelar", null)
+            .show()
     }
 
     fun cancelarNotifFija(context: Context) {
@@ -66,9 +86,9 @@ object ProgramadorNotificaciones {
         )
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
     // RECORDATORIOS ALEATORIOS
-    // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
 
     fun programarRecordatorios(context: Context, intervalHoras: Long) {
         val solicitud = PeriodicWorkRequestBuilder<WorkerRecordatorio>(intervalHoras, TimeUnit.HOURS)
@@ -87,9 +107,9 @@ object ProgramadorNotificaciones {
         WorkManager.getInstance(context).cancelUniqueWork(TAG_RECORDATORIO)
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
     // UTILIDAD INTERNA
-    // ─────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
 
     private fun calcularMomentoAbsoluto(hora: Int, minuto: Int): Long {
         val ahora   = Calendar.getInstance()

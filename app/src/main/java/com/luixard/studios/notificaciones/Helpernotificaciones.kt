@@ -92,6 +92,14 @@ object HelperNotificaciones {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val intentReiniciar = Intent(context, ReceptorAccionNotif::class.java).apply {
+            action = ReceptorAccionNotif.ACCION_REINICIAR_SERVICIO
+        }
+        val pendingReiniciar = PendingIntent.getBroadcast(
+            context, 98, intentReiniciar,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         val cuerpo = if (totalPendientes == 1)
             "Tienes 1 tarea pendiente. ¿Avanzaste algo hoy?"
         else
@@ -103,8 +111,9 @@ object HelperNotificaciones {
             .setContentText(cuerpo)
             .setStyle(NotificationCompat.BigTextStyle().bigText(cuerpo))
             .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setOngoing(true)           // No se puede descartar deslizando
+            .setOngoing(true)
             .setAutoCancel(false)
+            .setDeleteIntent(pendingReiniciar)
             .setContentIntent(pendingAbrir)
             .addAction(
                 R.drawable.ic_check_circle,
@@ -157,7 +166,6 @@ object HelperNotificaciones {
         try {
             NotificationManagerCompat.from(context).notify(id, builder.build())
         } catch (_: SecurityException) {
-            // El usuario no concedió el permiso POST_NOTIFICATIONS — ignorar silenciosamente
         }
     }
 
