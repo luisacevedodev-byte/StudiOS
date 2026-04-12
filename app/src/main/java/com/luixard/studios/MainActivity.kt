@@ -15,6 +15,7 @@ import com.luixard.studios.interfaz.notas.NotasFragment
 import com.luixard.studios.interfaz.tareas.ListaTareasFragment
 import com.luixard.studios.interfaz.inicio.DashboardFragment
 import com.luixard.studios.interfaz.perfil.PerfilFragment
+import com.luixard.studios.interfaz.perfil.ConfiguracionFragment
 import android.widget.Toast
 import com.luixard.studios.datos.sync.SyncManager
 
@@ -36,17 +37,20 @@ class MainActivity : AppCompatActivity() {
         val btnOpenDrawer = findViewById<ImageView>(R.id.btnOpenDrawer)
         val btnCloseDrawer = customDrawerView.findViewById<ImageView>(R.id.btnCloseDrawer)
 
-        // Referencia a la cabecera del menú (Donde está el icono y "Mi perfil")
+        // Referencia a la cabecera del menú
         val headerPerfil = customDrawerView.findViewById<View>(R.id.nav_header_perfil)
         val IconoPerfil = customDrawerView.findViewById<View>(R.id.nav_img_perfil)
         val btnNavVincular = findViewById<com.google.android.material.button.MaterialButton>(R.id.btnNavVincular)
 
-        // Referencias a los items del Menú Lateral (IDs de drawer_main.xml)
-        val optDashboard = customDrawerView.findViewById<LinearLayout>(R.id.nav_dashboard_item)
-        val optTareas = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
-        val optFinanzas = customDrawerView.findViewById<LinearLayout>(R.id.nav_finanzas_item)
-        val optNotas = customDrawerView.findViewById<LinearLayout>(R.id.nav_notas_item)
+        // Referencias a los items del Menú Lateral
+        val optDashboard    = customDrawerView.findViewById<LinearLayout>(R.id.nav_dashboard_item)
+        val optTareas       = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
+        val optFinanzas     = customDrawerView.findViewById<LinearLayout>(R.id.nav_finanzas_item)
+        val optNotas        = customDrawerView.findViewById<LinearLayout>(R.id.nav_notas_item)
+        // ── NUEVO: referencia al item de Configuración ──────────────────────
+        val optAjustes      = customDrawerView.findViewById<LinearLayout>(R.id.nav_ajustes_item)
 
+        // Solo los items principales participan en el resaltado azul del menú
         itemsMenu = listOf(optDashboard, optTareas, optFinanzas, optNotas)
 
         // CARGA INICIAL
@@ -63,23 +67,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-
         // --- LISTENERS ---
 
         btnOpenDrawer.setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
         btnCloseDrawer.setOnClickListener { drawerLayout.closeDrawer(GravityCompat.START) }
 
         optDashboard.setOnClickListener { cargarFragmento(DashboardFragment(), optDashboard) }
-        optTareas.setOnClickListener { cargarFragmento(ListaTareasFragment(), optTareas) }
-        optFinanzas.setOnClickListener { cargarFragmento(FinanzasFragment(), optFinanzas) }
-        optNotas.setOnClickListener { cargarFragmento(NotasFragment(), optNotas) }
+        optTareas.setOnClickListener    { cargarFragmento(ListaTareasFragment(), optTareas)  }
+        optFinanzas.setOnClickListener  { cargarFragmento(FinanzasFragment(), optFinanzas)   }
+        optNotas.setOnClickListener     { cargarFragmento(NotasFragment(), optNotas)         }
+
+        optAjustes?.setOnClickListener {
+            supportFragmentManager.beginTransaction()
+                .replace(R.id.contenedor_principal, ConfiguracionFragment())
+                .addToBackStack(null)
+                .commit()
+            actualizarEstiloMenu(null)
+            drawerLayout.closeDrawer(GravityCompat.START)
+        }
 
         btnNavVincular.setOnClickListener {
-            val bundle = Bundle().apply {
-                putBoolean("abrirVincularDirecto", true)
-            }
-
-
+            val bundle = Bundle().apply { putBoolean("abrirVincularDirecto", true) }
             val perfilFrag = PerfilFragment().apply { arguments = bundle }
             supportFragmentManager.beginTransaction()
                 .replace(R.id.contenedor_principal, perfilFrag)
@@ -92,9 +100,6 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.contenedor_principal, PerfilFragment())
                 .addToBackStack(null)
                 .commit()
-
-
-            // Pasamos null para que se quite la iluminación azul de todas las opciones del menú
             actualizarEstiloMenu(null)
             drawerLayout.closeDrawer(GravityCompat.START)
         }
@@ -103,40 +108,30 @@ class MainActivity : AppCompatActivity() {
                 .replace(R.id.contenedor_principal, PerfilFragment())
                 .addToBackStack(null)
                 .commit()
-
-            // Pasamos null para que se quite la iluminación azul de todas las opciones del menú
             actualizarEstiloMenu(null)
             drawerLayout.closeDrawer(GravityCompat.START)
         }
-
-        // Dentro de onCreate en MainActivity.kt
 
         val ivStatus = findViewById<ImageView>(R.id.ivOffline)
         val tvStatus = findViewById<TextView>(R.id.tvStatusText)
 
         com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener { auth ->
             val user = auth.currentUser
-
             if (user != null) {
-                // --- ESTADO ONLINE ---
                 ivStatus.setImageResource(R.drawable.ic_wifi_on)
                 tvStatus.text = "Online"
-
-                // Cambiamos el color a Cyan para que se note que hay conexión
                 val colorCyan = androidx.core.content.ContextCompat.getColor(this, R.color.studios_cyan_titulo)
                 ivStatus.setColorFilter(colorCyan)
                 tvStatus.setTextColor(colorCyan)
             } else {
-                // --- ESTADO OFFLINE ---
                 ivStatus.setImageResource(R.drawable.ic_wifi_off)
                 tvStatus.text = "Offline"
-
-                // Volvemos al gris normal
                 val colorGris = androidx.core.content.ContextCompat.getColor(this, R.color.gris_texto)
                 ivStatus.setColorFilter(colorGris)
                 tvStatus.setTextColor(colorGris)
             }
         }
+
         SyncManager.alCerrarSesionPorOtroDispositivo = {
             runOnUiThread {
                 Toast.makeText(this,
@@ -148,12 +143,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun cargarFragmento(fragmento: Fragment, itemSeleccionado: LinearLayout) {
         supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
-
         supportFragmentManager.beginTransaction()
             .replace(R.id.contenedor_principal, fragmento)
             .commit()
-
-        // Esta función aplica el "brillo" al item correcto
         actualizarEstiloMenu(itemSeleccionado)
         drawerLayout.closeDrawer(GravityCompat.START)
     }
@@ -167,27 +159,22 @@ class MainActivity : AppCompatActivity() {
             val texto = item.getChildAt(1) as TextView
 
             if (item == itemActivo) {
-                // Estado Seleccionado
                 item.setBackgroundResource(R.drawable.selector_drawer_fondo)
-
-                val colorPrincipal = if (esModoOscuro) {
+                val colorPrincipal = if (esModoOscuro)
                     ContextCompat.getColor(this, R.color.studios_cyan)
-                } else {
+                else
                     ContextCompat.getColor(this, R.color.studios_cyan_titulo)
-                }
 
-                val colorFondo = if (esModoOscuro) {
+                val colorFondo = if (esModoOscuro)
                     android.graphics.Color.parseColor("#2600D4FF")
-                } else {
+                else
                     android.graphics.Color.parseColor("#1A007B99")
-                }
 
                 item.background?.setTint(colorFondo)
                 icono.setColorFilter(colorPrincipal)
                 texto.setTextColor(colorPrincipal)
                 texto.paint.isFakeBoldText = true
             } else {
-                // Estado Inactivo
                 item.setBackgroundResource(android.R.color.transparent)
                 icono.setColorFilter(ContextCompat.getColor(this, R.color.gris_texto))
                 texto.setTextColor(ContextCompat.getColor(this, R.color.gris_texto))
@@ -205,10 +192,8 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Función para navegar desde el Dashboard y actualizar el menú
     fun navegarDesdeDashboard(idDestino: Int) {
         val customDrawerView = findViewById<android.view.View>(R.id.custom_drawer_view)
-
         when (idDestino) {
             R.id.nav_tareas_item -> {
                 val item = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
@@ -224,6 +209,4 @@ class MainActivity : AppCompatActivity() {
             }
         }
     }
-
-
 }

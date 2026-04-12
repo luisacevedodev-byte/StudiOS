@@ -31,6 +31,7 @@ import com.luixard.studios.datos.sync.SyncManager
 import com.luixard.studios.utilidades.MensajesUI
 import kotlinx.coroutines.launch
 
+@Suppress("DEPRECATION")
 class PerfilFragment : Fragment() {
 
     private lateinit var tvNombreUsuario:   TextView
@@ -59,7 +60,6 @@ class PerfilFragment : Fragment() {
     private var esVincularGoogle = false
 
     // ── Launcher para el resultado de Google Sign-In ─────────────────────────
-    // IMPORTANTE: Debe registrarse ANTES de onCreateView.
     private val googleSignInLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
@@ -213,15 +213,13 @@ class PerfilFragment : Fragment() {
         view.findViewById<ImageButton>(R.id.btnCerrarDialogo)?.setOnClickListener { dialog.dismiss() }
         view.findViewById<TextView>(R.id.tvTituloVincular)?.text = titulo
 
-        // Botón de correo (ya existente)
+        // Botón de correo
         view.findViewById<MaterialButton>(R.id.btnCorreo).setOnClickListener {
             dialog.dismiss()
             if (titulo == "Iniciar Sesión") mostrarDialogoLogin() else mostrarDialogoRegistro()
         }
 
-        // ── NUEVO: Botón de Google ────────────────────────────────────────────
-        // Asegúrate de añadir un MaterialButton con id="btnGoogle" en
-        // res/layout/dialogo_opciones_vincular.xml con texto "Continuar con Google"
+        // Botón de Google
         view.findViewById<MaterialButton>(R.id.btnGoogle)?.setOnClickListener {
             dialog.dismiss()
             esVincularGoogle = (titulo == "Vincular Cuenta")
@@ -232,7 +230,6 @@ class PerfilFragment : Fragment() {
     }
 
     // ── GOOGLE SIGN-IN ────────────────────────────────────────────────────────
-
     private fun iniciarSesionConGoogle() {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestIdToken(getString(R.string.default_web_client_id))
@@ -241,6 +238,7 @@ class PerfilFragment : Fragment() {
             .build()
 
         val googleSignInClient = GoogleSignIn.getClient(requireContext(), gso)
+        // Cierra sesión de Google primero para que siempre muestre el selector de cuentas
         googleSignInClient.signOut().addOnCompleteListener {
             googleSignInLauncher.launch(googleSignInClient.signInIntent)
         }
@@ -312,10 +310,38 @@ class PerfilFragment : Fragment() {
                 pas.length < 6  -> MensajesUI.error(requireActivity(), "La contraseña debe tener al menos 6 caracteres")
                 pas != conf     -> MensajesUI.error(requireActivity(), "Las contraseñas no coinciden")
                 else -> {
-                    viewModel.generarCodigoVerificacion()
-                    viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
-                    dialog.dismiss()
-                    mostrarDialogoVerificacionRegistro(cor, pas, nom, ape)
+                    // ── Verificar si el correo ya está vinculado a una cuenta de Google ──
+                    FirebaseAuth.getInstance().fetchSignInMethodsForEmail(cor)
+                        .addOnSuccessListener { result ->
+                            val metodos = result.signInMethods ?: emptyList()
+                            when {
+                                metodos.contains("google.com") -> {
+                                    MensajesUI.error(
+                                        requireActivity(),
+                                        "Este correo ya está vinculado a una cuenta de Google. " +
+                                                "Usa el botón \"Continuar con Google\" para iniciar sesión."
+                                    )
+                                }
+                                metodos.contains("password") -> {
+                                    MensajesUI.error(
+                                        requireActivity(),
+                                        "Ya existe una cuenta con este correo. Intenta iniciar sesión."
+                                    )
+                                }
+                                else -> {
+                                    viewModel.generarCodigoVerificacion()
+                                    viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
+                                    dialog.dismiss()
+                                    mostrarDialogoVerificacionRegistro(cor, pas, nom, ape)
+                                }
+                            }
+                        }
+                        .addOnFailureListener {
+                            viewModel.generarCodigoVerificacion()
+                            viewModel.enviarEmail(viewModel.prepararDatosEmail(nom, cor))
+                            dialog.dismiss()
+                            mostrarDialogoVerificacionRegistro(cor, pas, nom, ape)
+                        }
                 }
             }
         }
