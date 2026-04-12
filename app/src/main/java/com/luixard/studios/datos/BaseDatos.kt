@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
         HistorialAvanceTarea::class,
         RegistroActividad::class
     ],
-    version = 12,
+    version = 13,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -47,8 +47,6 @@ abstract class BaseDatos : RoomDatabase() {
         @Volatile
         private var INSTANCIA: BaseDatos? = null
 
-        // ── Migración 10 → 11 ─────────────────────────────────────────────────
-        // Agrega updated_at para merge inteligente
         private val MIGRATION_10_11 = object : Migration(10, 11) {
             override fun migrate(database: SupportSQLiteDatabase) {
                 database.execSQL("ALTER TABLE tareas        ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0")
@@ -60,19 +58,16 @@ abstract class BaseDatos : RoomDatabase() {
 
         private val MIGRATION_11_12 = object : Migration(11, 12) {
             override fun migrate(database: SupportSQLiteDatabase) {
-                // sync_id para cada tabla
                 database.execSQL("ALTER TABLE tareas        ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE notas         ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE transacciones ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
                 database.execSQL("ALTER TABLE finanzas      ADD COLUMN sync_id TEXT NOT NULL DEFAULT ''")
 
-                // Asignar UUIDs aleatorios a todos los registros existentes
                 database.execSQL("UPDATE tareas        SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
                 database.execSQL("UPDATE notas         SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
                 database.execSQL("UPDATE transacciones SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
                 database.execSQL("UPDATE finanzas      SET sync_id = LOWER(HEX(RANDOMBLOB(16)))")
 
-                // Borrado lógico para nota y transaccion (para propagación entre dispositivos)
                 database.execSQL("ALTER TABLE notas         ADD COLUMN esta_borrada INTEGER NOT NULL DEFAULT 0")
                 database.execSQL("ALTER TABLE transacciones ADD COLUMN esta_borrada INTEGER NOT NULL DEFAULT 0")
             }

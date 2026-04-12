@@ -12,10 +12,8 @@ class AuthRepositorio(
 ) {
     // ---------------- LECTURA DE DATOS (Flujos) ----------------
 
-    // Estos son los flujos que consumirá el PerfilViewModel para la matemática
     val fechaRegistroUsuario = usuarioDao.obtenerFechaRegistro()
     val fechasDeAvances = registroActividadDao.obtenerFechasDeAvances()
-
     val usuarioActual = usuarioDao.obtenerUsuarioActual()
 
     // ---------------- ACCIONES CRUD ----------------
@@ -28,24 +26,24 @@ class AuthRepositorio(
         usuarioDao.actualizarUsuario(usuario)
     }
 
-    // Llama a esta función desde TareasViewModel cada vez que se complete una tarea
     suspend fun registrarDiaProductivo(avance: HistorialAvanceTarea) {
         registroActividadDao.registrarAvance(avance)
     }
 
     // ---------------- FUNCIÓN PARA LA NOTIFICACIÓN ----------------
-    suspend fun guardarRegistroActividad(registro: RegistroActividad) {
-        // 1. Guardar la actividad general (avance o inactividad)
-        registroActividadDao.insertarRegistro(registro)
 
-        // 2. Validar si es un "avance" para vincularlo a la tarea y que sea visible
+    suspend fun guardarRegistroActividad(registro: RegistroActividad) {
+        try {
+            registroActividadDao.insertarRegistro(registro)
+        } catch (_: Exception) {
+        }
+
         if (registro.tipo == "avance") {
             val historialAvance = HistorialAvanceTarea(
-                id_tarea = registro.id_tarea.toInt(),
+                id_tarea            = registro.id_tarea.toInt(),
                 fecha_hora_registro = registro.fecha_registro,
-                nota_avance = registro.nota
+                nota_avance         = registro.nota
             )
-            // Llama a la función que ya tienes en RegistroActividadDao
             registroActividadDao.registrarAvance(historialAvance)
         }
     }

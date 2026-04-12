@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
+
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <!-- Necesario para mostrar el diálogo de exención de optimización de batería -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <application
         android:name=".AplicacionStudiOS"
@@ -27,22 +32,24 @@
             </intent-filter>
         </activity>
 
-        <receiver
-            android:name=".notificaciones.ReceptorAccionNotif"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.luixard.studios.ACCION_SIN_AVANCE" />
-            </intent-filter>
-        </receiver>
-
         <service
             android:name=".notificaciones.ServicioNotificacionFija"
             android:foregroundServiceType="specialUse"
             android:exported="false">
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Notificación persistente de seguimiento diario de tareas escolares" />
+                android:value="daily_task_reminder" />
         </service>
+
+        <receiver
+            android:name=".notificaciones.ReceptorAccionNotif"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.luixard.studios.ACCION_SIN_AVANCE" />
+                <action android:name="com.luixard.studios.ACCION_REINICIAR_SERVICIO" />
+                <action android:name="com.luixard.studios.ACCION_DISPARAR_NOTIF_FIJA" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

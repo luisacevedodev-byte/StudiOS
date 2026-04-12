@@ -47,7 +47,7 @@
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Nota de avance (opcional)"
+        android:hint="Nota de avance"
         app:placeholderText="Ej. &quot;Leí el capítulo 1&quot;"
         style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
         android:layout_marginBottom="24dp">

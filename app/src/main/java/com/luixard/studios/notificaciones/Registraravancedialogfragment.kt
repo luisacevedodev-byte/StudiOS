@@ -27,37 +27,30 @@ class RegistrarAvanceDialogFragment : BottomSheetDialogFragment() {
     companion object {
         private const val ARG_ID_TAREA = "id_tarea_preseleccionada"
 
-        /** Sin preselección (flujo desde notificación). */
         fun newInstance() = RegistrarAvanceDialogFragment()
 
-        /** Con tarea preseleccionada (flujo desde detalle de tarea en la app). */
         fun newInstance(idTarea: Long) = RegistrarAvanceDialogFragment().apply {
             arguments = Bundle().apply { putLong(ARG_ID_TAREA, idTarea) }
         }
+
+        // Orden de prioridad para mostrar las tareas más urgentes primero.
+        private val ORDEN_PRIORIDAD = mapOf(
+            "Alta"  to 0, "alta"  to 0, "ALTA"  to 0, "1" to 0,
+            "Media" to 1, "media" to 1, "MEDIA" to 1, "2" to 1,
+            "Baja"  to 2, "baja"  to 2, "BAJA"  to 2, "3" to 2
+        )
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    // VISTAS
-    // ─────────────────────────────────────────────────────────────────────
-
-    private lateinit var radioGroupTareas:   RadioGroup
-    private lateinit var inputNota:          TextInputEditText
-    private lateinit var btnConfirmar:       MaterialButton
-    private lateinit var btnCancelar:        MaterialButton
-
-    // ─────────────────────────────────────────────────────────────────────
-    // INFLATE
-    // ─────────────────────────────────────────────────────────────────────
+    private lateinit var radioGroupTareas: RadioGroup
+    private lateinit var inputNota:        TextInputEditText
+    private lateinit var btnConfirmar:     MaterialButton
+    private lateinit var btnCancelar:      MaterialButton
 
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View = inflater.inflate(R.layout.dialog_registrar_avance, container, false)
-
-    // ─────────────────────────────────────────────────────────────────────
-    // LÓGICA PRINCIPAL
-    // ─────────────────────────────────────────────────────────────────────
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -70,17 +63,15 @@ class RegistrarAvanceDialogFragment : BottomSheetDialogFragment() {
         val idPreseleccionada = arguments?.getLong(ARG_ID_TAREA, -1L) ?: -1L
         val app = requireContext().applicationContext as AplicacionStudiOS
 
-        // ── Cargar tareas pendientes ──────────────────────────────────────
+        // ── Cargar y ordenar tareas pendientes ────────────────────────────
         CoroutineScope(Dispatchers.IO).launch {
             val tareas = app.repositorioTareas.tareasPendientes.first()
 
-            // Ordenar: prioridad Alta (id=1) y Media (id=2) primero
-            // ← ADAPTA: si tu campo de prioridad tiene otro nombre o valor
-            val ordenadas = tareas.sortedBy { it.id_prioridad }
+            // Alta → Media → Baja (las más urgentes primero)
+            val ordenadas = tareas.sortedBy { ORDEN_PRIORIDAD[it.id_prioridad] ?: 99 }
 
             withContext(Dispatchers.Main) {
                 if (ordenadas.isEmpty()) {
-                    // Sin tareas, no tiene sentido el diálogo
                     Toast.makeText(requireContext(),
                         "¡No tienes tareas pendientes!", Toast.LENGTH_SHORT).show()
                     dismiss()
@@ -89,14 +80,15 @@ class RegistrarAvanceDialogFragment : BottomSheetDialogFragment() {
 
                 ordenadas.forEach { tarea ->
                     val rb = RadioButton(requireContext()).apply {
-                        id        = tarea.id_tarea.toInt()
-                        text      = tarea.titulo_tarea
-                        textSize  = 15f
+                        id       = tarea.id_tarea
+                        text     = tarea.titulo_tarea
+                        textSize = 15f
                         setPadding(16, 12, 16, 12)
                     }
                     radioGroupTareas.addView(rb)
                 }
 
+                // Pre-seleccionar si viene del detalle de la tarea
                 if (idPreseleccionada != -1L) {
                     radioGroupTareas.check(idPreseleccionada.toInt())
                     inputNota.requestFocus()
@@ -104,29 +96,37 @@ class RegistrarAvanceDialogFragment : BottomSheetDialogFragment() {
             }
         }
 
-        // ── Confirmar avance ─────────────────────────────────────────────
+        // ── Confirmar avance ──────────────────────────────────────────────
         btnConfirmar.setOnClickListener {
             val idSeleccionada = radioGroupTareas.checkedRadioButtonId
-
             if (idSeleccionada == -1) {
                 Toast.makeText(requireContext(),
                     "Selecciona la tarea en la que trabajaste", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
+            // NOTA OBLIGATORIA: se debe describir qué avanzaste para que quede
+            // registrado en el historial de la tarea y sea visible después.
             val nota = inputNota.text?.toString()?.trim() ?: ""
+            if (nota.isEmpty()) {
+                inputNota.error = "Escribe qué avanzaste hoy (ej. \"Leí el capítulo 1\")"
+                inputNota.requestFocus()
+                return@setOnClickListener
+            }
+            inputNota.error = null
 
             CoroutineScope(Dispatchers.IO).launch {
-                // Paso 6: timestamp automático
                 val ahora = Date()
 
                 val registro = RegistroActividad(
                     id_tarea       = idSeleccionada.toLong(),
-                    nota           = nota.ifEmpty { null },
+                    nota           = nota,
                     fecha_registro = ahora,
                     tipo           = "avance"
                 )
                 app.repositorioAuth.guardarRegistroActividad(registro)
+
+                // Cerrar la notificación fija
                 ServicioNotificacionFija.detener(requireContext())
 
                 withContext(Dispatchers.Main) {
@@ -137,7 +137,6 @@ class RegistrarAvanceDialogFragment : BottomSheetDialogFragment() {
             }
         }
 
-        // ── Cancelar ─────────────────────────────────────────────────────
         btnCancelar.setOnClickListener { dismiss() }
     }
 }

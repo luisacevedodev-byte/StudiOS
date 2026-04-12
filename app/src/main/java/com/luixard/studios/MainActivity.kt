@@ -1,16 +1,24 @@
 package com.luixard.studios
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.View
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.luixard.studios.interfaz.finanzas.FinanzasFragment
 import com.luixard.studios.interfaz.notas.NotasFragment
 import com.luixard.studios.interfaz.tareas.ListaTareasFragment
@@ -27,50 +35,43 @@ class MainActivity : AppCompatActivity() {
     private lateinit var customDrawerView: View
     private lateinit var itemsMenu: List<LinearLayout>
 
+    companion object {
+        private const val CODIGO_PERMISO_NOTIF = 1001
+        private const val PREFS                = "studios_config"
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Inicializar Drawer y Vista Personalizada
-        drawerLayout = findViewById(R.id.drawer_layout)
+        drawerLayout     = findViewById(R.id.drawer_layout)
         customDrawerView = findViewById(R.id.custom_drawer_view)
 
-        // Referencias a la Barra Superior
-        val btnOpenDrawer = findViewById<ImageView>(R.id.btnOpenDrawer)
+        val btnOpenDrawer  = findViewById<ImageView>(R.id.btnOpenDrawer)
         val btnCloseDrawer = customDrawerView.findViewById<ImageView>(R.id.btnCloseDrawer)
 
-        // Referencia a la cabecera del menú
-        val headerPerfil = customDrawerView.findViewById<View>(R.id.nav_header_perfil)
-        val IconoPerfil = customDrawerView.findViewById<View>(R.id.nav_img_perfil)
+        val headerPerfil   = customDrawerView.findViewById<View>(R.id.nav_header_perfil)
+        val IconoPerfil    = customDrawerView.findViewById<View>(R.id.nav_img_perfil)
         val btnNavVincular = findViewById<com.google.android.material.button.MaterialButton>(R.id.btnNavVincular)
 
-        // Referencias a los items del Menú Lateral
-        val optDashboard    = customDrawerView.findViewById<LinearLayout>(R.id.nav_dashboard_item)
-        val optTareas       = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
-        val optFinanzas     = customDrawerView.findViewById<LinearLayout>(R.id.nav_finanzas_item)
-        val optNotas        = customDrawerView.findViewById<LinearLayout>(R.id.nav_notas_item)
-        val optAjustes      = customDrawerView.findViewById<LinearLayout>(R.id.nav_ajustes_item)
+        val optDashboard = customDrawerView.findViewById<LinearLayout>(R.id.nav_dashboard_item)
+        val optTareas    = customDrawerView.findViewById<LinearLayout>(R.id.nav_tareas_item)
+        val optFinanzas  = customDrawerView.findViewById<LinearLayout>(R.id.nav_finanzas_item)
+        val optNotas     = customDrawerView.findViewById<LinearLayout>(R.id.nav_notas_item)
+        val optAjustes   = customDrawerView.findViewById<LinearLayout>(R.id.nav_ajustes_item)
 
-        // Solo los items principales participan en el resaltado azul del menú
         itemsMenu = listOf(optDashboard, optTareas, optFinanzas, optNotas)
 
-        // CARGA INICIAL
         if (savedInstanceState == null) {
             cargarFragmento(DashboardFragment(), optDashboard)
         }
 
-        // Controlar visibilidad según la sesión de btnNavVincular
         com.google.firebase.auth.FirebaseAuth.getInstance().addAuthStateListener { auth ->
-            if (auth.currentUser != null) {
-                btnNavVincular.visibility = android.view.View.GONE
-            } else {
-                btnNavVincular.visibility = android.view.View.VISIBLE
-            }
+            btnNavVincular.visibility =
+                if (auth.currentUser != null) android.view.View.GONE else android.view.View.VISIBLE
         }
 
-        // --- LISTENERS ---
-
-        btnOpenDrawer.setOnClickListener { drawerLayout.openDrawer(GravityCompat.START) }
+        btnOpenDrawer.setOnClickListener  { drawerLayout.openDrawer(GravityCompat.START) }
         btnCloseDrawer.setOnClickListener { drawerLayout.closeDrawer(GravityCompat.START) }
 
         optDashboard.setOnClickListener { cargarFragmento(DashboardFragment(), optDashboard) }
@@ -95,7 +96,6 @@ class MainActivity : AppCompatActivity() {
                 .commit()
         }
 
-        // LISTENER PARA EL PERFIL
         headerPerfil?.setOnClickListener {
             supportFragmentManager.beginTransaction()
                 .replace(R.id.contenedor_principal, PerfilFragment())
@@ -121,13 +121,13 @@ class MainActivity : AppCompatActivity() {
             if (user != null) {
                 ivStatus.setImageResource(R.drawable.ic_wifi_on)
                 tvStatus.text = "Online"
-                val colorCyan = androidx.core.content.ContextCompat.getColor(this, R.color.studios_cyan_titulo)
+                val colorCyan = ContextCompat.getColor(this, R.color.studios_cyan_titulo)
                 ivStatus.setColorFilter(colorCyan)
                 tvStatus.setTextColor(colorCyan)
             } else {
                 ivStatus.setImageResource(R.drawable.ic_wifi_off)
                 tvStatus.text = "Offline"
-                val colorGris = androidx.core.content.ContextCompat.getColor(this, R.color.gris_texto)
+                val colorGris = ContextCompat.getColor(this, R.color.gris_texto)
                 ivStatus.setColorFilter(colorGris)
                 tvStatus.setTextColor(colorGris)
             }
@@ -141,11 +141,117 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Manejar apertura desde notificación (CU-02)
         manejarIntentDeNotificacion(intent)
+
+        // ── Solicitar permisos al primer arranque ──────────────────────────────
+        solicitarPermisosNecesarios()
     }
 
-    // ── Abrir app desde notificación ──────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────
+    // FLUJO DE PERMISOS CON UI EDUCATIVA
+    // ─────────────────────────────────────────────────────────────────────────
+    private fun solicitarPermisosNecesarios() {
+        val prefs = getSharedPreferences(PREFS, MODE_PRIVATE)
+
+        // Si ya se presentó el flujo, solo verificar batería silenciosamente
+        if (prefs.getBoolean("permisos_presentados", false)) {
+            verificarBateriaConDialog(silencioso = true)
+            return
+        }
+
+        MaterialAlertDialogBuilder(this)
+            .setIcon(R.drawable.ic_notificacion_activa)
+            .setTitle("Activar recordatorios 🔔")
+            .setMessage(
+                "StudiOS te avisará cada día sobre tus tareas pendientes para que nunca se te olvide una entrega.\n\n" +
+                        "Necesitamos dos cosas:\n" +
+                        "  • Permiso para enviar notificaciones\n" +
+                        "  • Funcionar en segundo plano sin restricciones de batería"
+            )
+            .setPositiveButton("Activar") { _, _ ->
+                prefs.edit().putBoolean("permisos_presentados", true).apply()
+                pedirPermisoNotificacion()
+            }
+            .setNegativeButton("Ahora no") { _, _ ->
+                prefs.edit().putBoolean("permisos_presentados", true).apply()
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun pedirPermisoNotificacion() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val permiso = Manifest.permission.POST_NOTIFICATIONS
+            if (ContextCompat.checkSelfPermission(this, permiso) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, arrayOf(permiso), CODIGO_PERMISO_NOTIF)
+                return
+            }
+        }
+        // Permiso ya concedido (o no necesario en < Android 13): continuar con batería
+        verificarBateriaConDialog(silencioso = false)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == CODIGO_PERMISO_NOTIF) {
+            verificarBateriaConDialog(silencioso = false)
+        }
+    }
+
+    private fun verificarBateriaConDialog(silencioso: Boolean) {
+        val pm = getSystemService(POWER_SERVICE) as PowerManager
+        if (pm.isIgnoringBatteryOptimizations(packageName)) {
+            // Ya está exenta; no molestar al usuario
+            return
+        }
+
+        val miui = esMIUI()
+        val mensajeExtra = if (miui)
+            "\n\nEn dispositivos Xiaomi / POCO también ve a:\n" +
+                    "Ajustes › Aplicaciones › StudiOS › Autoarranque y actívalo.\n" +
+                    "Sin esto, MIUI puede bloquear las alarmas en segundo plano."
+        else ""
+
+        if (silencioso && !miui) return
+
+        MaterialAlertDialogBuilder(this)
+            .setTitle("Funcionar en segundo plano ⚙️")
+            .setMessage(
+                "Para que los recordatorios lleguen exactamente a la hora que configures, " +
+                        "incluso con la app cerrada, desactiva la optimización de batería para StudiOS." +
+                        mensajeExtra
+            )
+            .setPositiveButton("Configurar") { _, _ ->
+                try {
+                    startActivity(
+                        Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                            data = Uri.parse("package:$packageName")
+                        }
+                    )
+                } catch (_: Exception) {
+                    try {
+                        startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+                    } catch (_: Exception) { /* nada que hacer */ }
+                }
+            }
+            .setNegativeButton("Omitir", null)
+            .show()
+    }
+
+    private fun esMIUI(): Boolean = try {
+        val clazz = Class.forName("android.os.SystemProperties")
+        val get   = clazz.getMethod("get", String::class.java)
+        (get.invoke(clazz, "ro.miui.ui.version.name") as String).isNotEmpty()
+    } catch (_: Exception) { false }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // NAVEGACIÓN
+    // ─────────────────────────────────────────────────────────────────────────
+
     private fun manejarIntentDeNotificacion(intent: Intent?) {
         when (intent?.getStringExtra("destino")) {
             "registrar_avance" -> {
@@ -167,8 +273,6 @@ class MainActivity : AppCompatActivity() {
         manejarIntentDeNotificacion(intent)
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun cargarFragmento(fragmento: Fragment, itemSeleccionado: LinearLayout) {
         supportFragmentManager.popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE)
         supportFragmentManager.beginTransaction()
@@ -179,7 +283,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun actualizarEstiloMenu(itemActivo: LinearLayout?) {
-        val uiMode = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+        val uiMode     = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
         val esModoOscuro = uiMode == android.content.res.Configuration.UI_MODE_NIGHT_YES
 
         for (item in itemsMenu) {
