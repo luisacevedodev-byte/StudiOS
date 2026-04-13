@@ -4,7 +4,6 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
-import com.luixard.studios.datos.remoto.EmailJSManager
 import com.luixard.studios.datos.repositorios.AuthRepositorio
 import com.luixard.studios.datos.repositorios.FinanzasRepositorio
 import com.luixard.studios.datos.repositorios.NotaRepositorio
@@ -29,8 +28,6 @@ class PerfilViewModel(
     val correoUsuario        = MutableLiveData("")
     val estaCargandoRespaldo = MutableLiveData(false)
 
-    private val emailManager = EmailJSManager()
-    val codigoGenerado: String get() = emailManager.getCodigoActual()
     private val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
     init {
@@ -109,7 +106,8 @@ class PerfilViewModel(
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // GOOGLE SIGN-IN — Métodos nuevos
+    // GOOGLE SIGN-IN — delegado a AuthViewModel, pero el SyncManager
+    // sigue necesitando ser informado desde aquí.
     // ─────────────────────────────────────────────────────────────────────────
 
     fun vincularCuentaGoogle(nombre: String, apellido: String) {
@@ -122,12 +120,4 @@ class PerfilViewModel(
         actualizarNombreInmediato(nombre, apellido)
         SyncManager.onInicioSesion(uid, nombre, apellido)
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // EMAIL
-    // ─────────────────────────────────────────────────────────────────────────
-
-    fun generarCodigoVerificacion()                              = emailManager.generarCodigoVerificacion()
-    fun prepararDatosEmail(nombre: String, correo: String)       = emailManager.prepararDatosEmail(nombre, correo)
-    fun enviarEmail(datos: Map<String, Any>) { viewModelScope.launch { emailManager.enviarEmail(datos) } }
 }

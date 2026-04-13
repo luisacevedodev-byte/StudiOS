@@ -57,7 +57,6 @@ object ProgramadorNotificaciones {
             )
             .setPositiveButton("Sí, cambiar") { _, _ ->
                 programarNotifFija(context, hora, minuto)
-                ServicioNotificacionFija.iniciar(context)
             }
             .setNegativeButton("Cancelar", null)
             .show()

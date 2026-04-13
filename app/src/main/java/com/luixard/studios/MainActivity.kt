@@ -13,6 +13,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.viewModels
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
@@ -34,6 +35,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var customDrawerView: View
     private lateinit var itemsMenu: List<LinearLayout>
+
+    private var loginRecienteEnEsteDispositivo = false
 
     companion object {
         private const val CODIGO_PERMISO_NOTIF = 1001
@@ -134,14 +137,32 @@ class MainActivity : AppCompatActivity() {
         }
 
         SyncManager.alCerrarSesionPorOtroDispositivo = {
-            runOnUiThread {
-                Toast.makeText(this,
-                    "Se cerró la sesión, nuevo inicio de sesión en otro dispositivo.",
-                    Toast.LENGTH_LONG).show()
+            // Ignorar si este dispositivo fue el que acaba de iniciar sesión:
+            // el listener de Firestore se dispara localmente al escribir el propio token.
+            if (!loginRecienteEnEsteDispositivo) {
+                runOnUiThread {
+                    Toast.makeText(this,
+                        "Se cerró la sesión, nuevo inicio de sesión en otro dispositivo.",
+                        Toast.LENGTH_LONG).show()
+                }
             }
         }
 
         manejarIntentDeNotificacion(intent)
+
+        // ── Marcar login reciente para no disparar el callback de "otro dispositivo" ──
+        val authViewModel: com.luixard.studios.interfaz.perfil.AuthViewModel by viewModels()
+        authViewModel.authEstado.observe(this) { estado ->
+            if (estado is com.luixard.studios.interfaz.perfil.AuthEstado.LoginExito ||
+                estado is com.luixard.studios.interfaz.perfil.AuthEstado.GoogleExito) {
+                loginRecienteEnEsteDispositivo = true
+                // Resetear el flag después de 4 s — tiempo suficiente para que el
+                // listener de Firestore se dispare y sea ignorado.
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    loginRecienteEnEsteDispositivo = false
+                }, 4_000)
+            }
+        }
 
         // ── Solicitar permisos al primer arranque ──────────────────────────────
         solicitarPermisosNecesarios()
