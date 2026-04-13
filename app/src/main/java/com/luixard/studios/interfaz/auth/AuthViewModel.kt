@@ -13,31 +13,26 @@ import com.luixard.studios.datos.remoto.EmailJSManager
 import com.luixard.studios.datos.sync.SyncManager
 import kotlinx.coroutines.launch
 
-// ── Estado sellado que PerfilFragment observa para reaccionar a cada resultado ──
 sealed class AuthEstado {
     object Inactivo : AuthEstado()
 
-    /** Login con correo/contraseña exitoso */
     data class LoginExito(
         val uid: String,
         val nombre: String,
         val apellido: String
     ) : AuthEstado()
 
-    /** Cuenta nueva creada (registro con correo) */
     data class RegistroExito(
         val nombre: String,
         val apellido: String
     ) : AuthEstado()
 
-    /** Autenticación con Google exitosa */
     data class GoogleExito(
         val nombre: String,
         val apellido: String,
         val esNuevo: Boolean
     ) : AuthEstado()
 
-    /** El correo de restablecimiento fue enviado exitosamente */
     object ResetEnviado : AuthEstado()
 
     data class Error(val mensaje: String) : AuthEstado()
@@ -48,8 +43,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     val authEstado = MutableLiveData<AuthEstado>(AuthEstado.Inactivo)
 
     private val emailManager = EmailJSManager()
-
-    // ── Código de verificación ─────────────────────────────────────────────────
 
     val codigoGenerado: String get() = emailManager.getCodigoActual()
 
@@ -68,23 +61,17 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             .addOnSuccessListener { result ->
                 val uid = result.user?.uid ?: ""
 
-                // 1) Publicar éxito de inmediato — la UI no queda bloqueada por Firestore.
-                authEstado.value = AuthEstado.LoginExito(uid, "", "")
-
-                // 2) Obtener nombre desde Firestore en segundo plano (best-effort).
                 FirebaseFirestore.getInstance()
                     .collection("usuarios").document(uid).get()
                     .addOnSuccessListener { doc ->
                         val nom = if (doc.exists()) doc.getString("perfil.nombre")   ?: "" else ""
                         val ape = if (doc.exists()) doc.getString("perfil.apellido") ?: "" else ""
-                        if (nom.isNotEmpty()) {
-                            authEstado.value = AuthEstado.LoginExito(uid, nom, ape)
-                        }
                         try { SyncManager.onInicioSesion(uid, nom, ape) } catch (_: Exception) {}
+                        authEstado.value = AuthEstado.LoginExito(uid, nom, ape)
                     }
                     .addOnFailureListener {
-                        // Firestore no disponible — login ya fue aceptado, sync después.
                         try { SyncManager.onInicioSesion(uid, "", "") } catch (_: Exception) {}
+                        authEstado.value = AuthEstado.LoginExito(uid, "", "")
                     }
             }
             .addOnFailureListener { e ->
@@ -101,9 +88,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-    // ── Verificar si correo ya tiene cuenta antes de registrar ────────────────
-
-
     fun verificarCorreoYRegistrar(
         correo: String,
         password: String,
@@ -114,7 +98,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
     ) {
         FirebaseAuth.getInstance().createUserWithEmailAndPassword(correo, "probe_check_only_${System.currentTimeMillis()}")
             .addOnSuccessListener { result ->
-                // El correo NO existía — eliminar la cuenta de prueba y proceder con el código.
                 result.user?.delete()
                 generarCodigoVerificacion()
                 enviarEmail(prepararDatosEmail(nombre, correo))
@@ -124,18 +107,11 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 val ex = e as? FirebaseAuthException
                 when (ex?.errorCode) {
                     "ERROR_EMAIL_ALREADY_IN_USE" -> {
-                        // Correo en uso: puede ser Google o password. Pedir que use
-                        // el método con el que se registró originalmente.
                         alError(
                             "Este correo ya tiene una cuenta registrada.\n\n" +
                                     "Si te registraste con Google, usa el botón \"Continuar con Google\". " +
                                     "Si usaste correo y contraseña, ve a \"Iniciar Sesión\"."
                         )
-                    }
-                    "ERROR_WEAK_PASSWORD" -> {
-                        generarCodigoVerificacion()
-                        enviarEmail(prepararDatosEmail(nombre, correo))
-                        alEnviarCodigo()
                     }
                     else -> {
                         generarCodigoVerificacion()
@@ -145,8 +121,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 }
             }
     }
-
-    // ── Crear cuenta Firebase (tras verificación de código) ───────────────────
 
     fun crearCuentaFirebase(correo: String, password: String, nombre: String, apellido: String) {
         FirebaseAuth.getInstance().createUserWithEmailAndPassword(correo, password)
@@ -165,8 +139,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             }
     }
 
-    // ── Google Sign-In ────────────────────────────────────────────────────────
-
     fun autenticarConGoogle(account: GoogleSignInAccount, esVincular: Boolean) {
         val credential = GoogleAuthProvider.getCredential(account.idToken, null)
 
@@ -174,8 +146,16 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
             .addOnSuccessListener { result ->
                 val nombre   = account.givenName  ?: ""
                 val apellido = account.familyName ?: ""
+                val esNuevo  = result.additionalUserInfo?.isNewUser == true
 
-                val esNuevo = result.additionalUserInfo?.isNewUser == true
+                if (!esNuevo && esVincular) {
+                    FirebaseAuth.getInstance().signOut()
+                    authEstado.value = AuthEstado.Error(
+                        "Esta cuenta de Google ya está registrada.\n\nUsa \"Iniciar Sesión\" para acceder con ella."
+                    )
+                    return@addOnSuccessListener
+                }
+
                 if (esNuevo) {
                     SyncManager.onNuevaCuentaVinculada(nombre, apellido)
                 } else {
@@ -194,8 +174,6 @@ class AuthViewModel(application: Application) : AndroidViewModel(application) {
                 authEstado.value = AuthEstado.Error(msg)
             }
     }
-
-    // ── Recuperar contraseña ──────────────────────────────────────────────────
 
     fun enviarResetPassword(correo: String) {
         FirebaseAuth.getInstance().sendPasswordResetEmail(correo)

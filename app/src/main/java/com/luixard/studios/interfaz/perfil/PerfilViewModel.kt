@@ -48,10 +48,6 @@ class PerfilViewModel(
         verificarSesion()
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // ESTADÍSTICAS
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun calcularPorcentajeTareas() {
         viewModelScope.launch {
             repositorioTareas.totalTareas
@@ -73,10 +69,6 @@ class PerfilViewModel(
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // SESIÓN
-    // ─────────────────────────────────────────────────────────────────────────
-
     fun verificarSesion() {
         val user = FirebaseAuth.getInstance().currentUser
         usuarioLogueado.value = user != null
@@ -89,6 +81,12 @@ class PerfilViewModel(
             nombreUsuarioDisplay.value = ""
             correoUsuario.value = "Usuario no registrado"
         }
+    }
+
+    fun marcarSesionActiva() {
+        val user = FirebaseAuth.getInstance().currentUser ?: return
+        usuarioLogueado.value = true
+        correoUsuario.value   = user.email
     }
 
     fun actualizarNombreInmediato(nombre: String, apellido: String) {
@@ -105,19 +103,11 @@ class PerfilViewModel(
         verificarSesion()
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // GOOGLE SIGN-IN — delegado a AuthViewModel, pero el SyncManager
-    // sigue necesitando ser informado desde aquí.
-    // ─────────────────────────────────────────────────────────────────────────
-
     fun vincularCuentaGoogle(nombre: String, apellido: String) {
         actualizarNombreInmediato(nombre, apellido)
-        SyncManager.onNuevaCuentaVinculada(nombre, apellido)
     }
 
     fun iniciarSesionGoogle(nombre: String, apellido: String) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         actualizarNombreInmediato(nombre, apellido)
-        SyncManager.onInicioSesion(uid, nombre, apellido)
     }
 }

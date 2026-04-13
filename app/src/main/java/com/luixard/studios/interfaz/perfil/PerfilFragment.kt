@@ -36,7 +36,6 @@ class PerfilFragment : Fragment() {
     private lateinit var cardCerrarSesion:  MaterialCardView
     private lateinit var layoutCargando:    LinearLayout
 
-    // ── ViewModels ────────────────────────────────────────────────────────────
     private val viewModel: PerfilViewModel by viewModels {
         val app = requireActivity().application as AplicacionStudiOS
         PerfilViewModelFactory(
@@ -47,14 +46,11 @@ class PerfilFragment : Fragment() {
         )
     }
 
-    // AuthViewModel scoped to the activity so LoginFragment, RegistroFragment,
-    // DialogoVerificacion y MenuAuthFragment lo comparten automáticamente.
     private val authViewModel: AuthViewModel by activityViewModels()
 
     private val PREFS_NAME         = "StudiosPrefs"
     private val KEY_NOMBRE_USUARIO = "nombre_usuario"
 
-    // ── Google Sign-In ────────────────────────────────────────────────────────
     private var esVincularGoogle = false
 
     private val googleSignInLauncher = registerForActivityResult(
@@ -70,10 +66,6 @@ class PerfilFragment : Fragment() {
             }
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // CICLO DE VIDA
-    // ─────────────────────────────────────────────────────────────────────────
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -95,25 +87,18 @@ class PerfilFragment : Fragment() {
         cargarNombreUsuario()
         setupObservers()
 
-        // ── Listeners de tarjetas ─────────────────────────────────────────────
-        btnEditarNombre.setOnClickListener   { mostrarDialogoEditarNombre() }
-        cardCerrarSesion.setOnClickListener  { viewModel.cerrarSesion() }
+        btnEditarNombre.setOnClickListener  { mostrarDialogoEditarNombre() }
+        cardCerrarSesion.setOnClickListener { viewModel.cerrarSesion() }
 
-        cardVincular.setOnClickListener {
-            mostrarMenuAuth("Vincular Cuenta")
-        }
-        cardIniciarSesion.setOnClickListener {
-            mostrarMenuAuth("Iniciar Sesión")
-        }
+        cardVincular.setOnClickListener      { mostrarMenuAuth("Vincular Cuenta") }
+        cardIniciarSesion.setOnClickListener { mostrarMenuAuth("Iniciar Sesión") }
 
-        // Abrir directamente el menú de vinculación si viene desde el botón del Drawer
         val abrirVincular = arguments?.getBoolean("abrirVincularDirecto") ?: false
         if (abrirVincular) {
             arguments?.putBoolean("abrirVincularDirecto", false)
             mostrarMenuAuth("Vincular Cuenta")
         }
 
-        // Observar loginCompletado del SyncManager para refrescar sesión
         viewLifecycleOwner.lifecycleScope.launch {
             SyncManager.loginCompletado.collect { completado ->
                 if (completado) {
@@ -126,10 +111,6 @@ class PerfilFragment : Fragment() {
         viewModel.verificarSesion()
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MENÚ AUTH — lanza MenuAuthFragment con el callback de Google
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun mostrarMenuAuth(titulo: String) {
         val menu = MenuAuthFragment.newInstance(titulo)
         menu.alSeleccionarGoogle = { esVincular ->
@@ -138,10 +119,6 @@ class PerfilFragment : Fragment() {
         }
         menu.show(parentFragmentManager, "MenuAuth")
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // GOOGLE SIGN-IN
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun iniciarFlujoGoogle() {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -156,13 +133,8 @@ class PerfilFragment : Fragment() {
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // OBSERVADORES
-    // ─────────────────────────────────────────────────────────────────────────
-
     private fun setupObservers() {
 
-        // ── PerfilViewModel ───────────────────────────────────────────────────
         viewModel.porcentajeTareas.observe(viewLifecycleOwner)     { tvStatTareas.text     = "$it%" }
         viewModel.porcentajeAsistencia.observe(viewLifecycleOwner) { tvStatAsistencia.text = "$it%" }
 
@@ -185,44 +157,46 @@ class PerfilFragment : Fragment() {
             layoutCargando.visibility = if (cargando) View.VISIBLE else View.GONE
         }
 
-        // ── AuthViewModel — reaccionar a resultados de auth ───────────────────
         authViewModel.authEstado.observe(viewLifecycleOwner) { estado ->
             when (estado) {
                 is AuthEstado.LoginExito -> {
+                    // marcarSesionActiva() actualiza la UI sin llamar SyncManager de nuevo.
+                    // AuthViewModel ya llamó SyncManager.onInicioSesion — no duplicar.
                     if (estado.nombre.isNotEmpty()) {
                         guardarNombreUsuario("${estado.nombre} ${estado.apellido}".trim())
                         viewModel.actualizarNombreInmediato(estado.nombre, estado.apellido)
                     }
-                    viewModel.verificarSesion()
+                    viewModel.marcarSesionActiva()
                     // El mensaje de éxito lo muestra LoginFragment
                 }
                 is AuthEstado.RegistroExito -> {
                     guardarNombreUsuario("${estado.nombre} ${estado.apellido}".trim())
                     viewModel.actualizarNombreInmediato(estado.nombre, estado.apellido)
-                    viewModel.verificarSesion()
+                    viewModel.marcarSesionActiva()
                     // El mensaje de éxito lo muestra DialogoVerificacion
                 }
                 is AuthEstado.GoogleExito -> {
-                    guardarNombreUsuario("${estado.nombre} ${estado.apellido}".trim())
-                    tvNombreUsuario.text = "${estado.nombre} ${estado.apellido}".trim()
+                    val nombreCompleto = "${estado.nombre} ${estado.apellido}".trim()
+                    guardarNombreUsuario(nombreCompleto)
+                    tvNombreUsuario.text = nombreCompleto
+                    // SyncManager ya fue llamado en AuthViewModel — NO llamar de nuevo.
+                    viewModel.actualizarNombreInmediato(estado.nombre, estado.apellido)
+                    viewModel.marcarSesionActiva()
                     if (estado.esNuevo) {
-                        viewModel.vincularCuentaGoogle(estado.nombre, estado.apellido)
                         MensajesUI.exito(requireActivity(), "¡Cuenta vinculada con Google!")
                     } else {
-                        viewModel.iniciarSesionGoogle(estado.nombre, estado.apellido)
                         MensajesUI.exito(requireActivity(), "¡Bienvenido de nuevo, ${estado.nombre}!")
                     }
-                    viewModel.verificarSesion()
+                    authViewModel.resetEstado()
+                }
+                is AuthEstado.Error -> {
+                    MensajesUI.error(requireActivity(), estado.mensaje)
                     authViewModel.resetEstado()
                 }
                 else -> {}
             }
         }
     }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // NOMBRE LOCAL
-    // ─────────────────────────────────────────────────────────────────────────
 
     private fun cargarNombreUsuario() {
         val sp = requireActivity().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
